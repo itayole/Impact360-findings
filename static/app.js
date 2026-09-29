@@ -51,6 +51,17 @@ function askText(msg, def = '') {   // in-page replacement for prompt() (not ava
   });
 }
 
+function goStep(k) {
+  if (k === 1) return viewStep1();
+  if (!S.project || !S.review) return toast('קודם יש לפתוח פרויקט (שלב 1)');
+  if (k === 2) return viewStep2();
+  if (k === 3) return viewStep3();
+  if (k === 4) return viewStep4();
+}
+function backBar(prev, label) {
+  return h('div', { class: 'row', style: 'margin-bottom:10px' }, h('button', { class: 'btn ghost small', onclick: prev }, '→ ' + label));
+}
+
 function setStep(n) {
   S.step = n;
   document.querySelectorAll('#steps li').forEach(li => {
@@ -148,14 +159,14 @@ async function refreshReview() { S.review = await api(`/projects/${S.project.id}
 async function patch(body) { S.review = await api(`/projects/${S.project.id}/mapping`, { method: 'PUT', json: body }); }
 
 function sec(title, pill, pillClass, ...body) {
-  return h('details', { class: 'sec', open: true }, h('summary', null, h('h2', null, title), pill ? h('span', { class: 'pill ' + (pillClass || '') }, pill) : null), h('div', { class: 'body' }, ...body));
+  return h('details', { class: 'sec', open: true, id: 'sec-' + title.split('.')[0] }, h('summary', null, h('h2', null, title), pill ? h('span', { class: 'pill ' + (pillClass || '') }, pill) : null), h('div', { class: 'body' }, ...body));
 }
 
 async function viewStep2() {
   setStep(2);
   const main = $('#main'); main.replaceChildren();
   const R = S.review, M = R.mapping, pid = S.project.id;
-  main.append(h('h1', null, `שלב 2 · סקירה — ${M.project.name || ''}`));
+  main.append(backBar(viewStep1, 'חזרה לשלב 1 (פרויקט)'), h('h1', null, `שלב 2 · סקירה — ${M.project.name || ''}`));
   const q = M.questionnaire;
   if (M.template_diff) {
     const d = M.template_diff;
@@ -163,7 +174,9 @@ async function viewStep2() {
       d.new.length ? `בלוקים חדשים: ${d.new.join(', ')}. ` : '', d.missing.length ? `חסרים מול התבנית: ${d.missing.join(', ')}. ` : '',
       d.structure_changed.length ? `שינוי מבנה: ${d.structure_changed.join(', ')}.` : ''));
   }
+  if (S.jumpTo) { const j = S.jumpTo; S.jumpTo = null; S.pendingJump = j; }
   main.append(secExposure(M, R), secCustomers(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
+  if (S.pendingJump) { const j = S.pendingJump; S.pendingJump = null; setTimeout(() => { const el = $('#sec-5'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 400); }
   const next = h('button', { class: 'btn gold' }, 'המשך להרצה ←');
   next.onclick = () => viewStep3();
   main.append(h('div', { style: 'margin-top:14px' }, next));
@@ -337,8 +350,8 @@ function secWarnings() {
 function secResults(open) {
   const host = h('div', null, h('button', { class: 'btn small', onclick: e => load(e.target) }, 'טען טבלאות ממצאים'));
   async function load(btn) {
-    btn.disabled = true; btn.textContent = 'מחשב…';
-    try { renderTables(host, await api(`/projects/${S.project.id}/results`)); } catch (e) { host.replaceChildren(h('div', { class: 'alert err' }, e.message)); }
+    if (btn) { btn.disabled = true; btn.textContent = 'מחשב…'; }
+    try { if (!S.catalog) S.catalog = await api(`/projects/${S.project.id}/catalog`); renderTables(host, await api(`/projects/${S.project.id}/results`), () => { host.replaceChildren(h('p', { class: 'muted' }, 'מחשב…')); load(); }); } catch (e) { host.replaceChildren(h('div', { class: 'alert err' }, e.message)); }
   }
   const d = h('details', { class: 'sec', open: !!open }, h('summary', null, h('h2', null, '7. ממצאים — טבלאות לאימות'), h('span', { class: 'pill' }, 'מדגם · נחשפים · לא נחשפים · לקוחות · לא לקוחות')),
     h('div', { class: 'body' }, h('p', { class: 'muted' }, 'כל השאלות כפי שיופיעו באקסל, עם n (מספר משיבים) לכל תשובה ואותיות מובהקות (אות גדולה 95%, קטנה 90%; B מול C, D מול E). ערך אדום = בסיס קטן מ-30. אם משהו לא נראה נכון, חזור/י לסעיף 3 והחלף/אשר את ההתאמה.'), host));
@@ -347,14 +360,18 @@ function secResults(open) {
   return d;
 }
 
-function renderTables(host, R) {
+function editCounts(key) { S.netBlock = key; S.jumpTo = key; S.step === 2 ? viewStep2() : viewStep2(); }
+
+function renderTables(host, R, reload) {
   host.replaceChildren();
+  const editable = new Set((S.catalog || []).map(b => b.key));
   let showN = true, q = '', onlyDict = false;
   const list = h('div');
   const bar = h('div', { class: 'row', style: 'margin-bottom:8px' },
     h('input', { type: 'text', placeholder: 'חיפוש שאלה / משתנה…', oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } }),
     h('label', null, h('input', { type: 'checkbox', checked: true, onchange: e => { showN = e.target.checked; draw(); } }), ' הצג n לכל תשובה'),
     h('label', null, h('input', { type: 'checkbox', onchange: e => { onlyDict = e.target.checked; draw(); } }), ' רק שאלות שמופו למילון'),
+    reload ? h('button', { class: 'btn small ghost', onclick: reload }, '↻ רענן אחרי שינויים') : null,
     h('span', { class: 'muted' }, LEVELS.map(l => `${LETTER[l]}=${LEVEL_HE[l]} (N=${R.bases[l]})`).join(' · ')));
   function cell(r, l) {
     const v = r.values[l], n = r.n[l];
@@ -368,7 +385,7 @@ function renderTables(host, R) {
       const tr = r => h('tr', { class: r.section === 'summary' ? 'sum' : '' }, h('td', null, r.label, r.note ? h('div', { class: 'muted' }, r.note) : null), h('td', null, r.united ? h('code', null, r.united) : ''), ...LEVELS.map(l => cell(r, l)));
       const conf = t.confidence ? h('span', { class: 'badge ' + t.confidence, style: 'margin-inline-start:8px' }, CONF_HE[t.confidence] || t.confidence) : null;
       list.append(h('details', { class: 'sec' }, h('summary', null, h('b', null, t.title), h('code', null, t.key), conf, h('span', { class: 'pill' }, t.rows.length + ' שורות')),
-        h('div', { class: 'body' }, t.question ? h('p', { class: 'muted' }, t.question.slice(0, 230)) : null,
+        h('div', { class: 'body' }, h('div', { class: 'row', style: 'margin-bottom:6px' }, editable.has(t.key) ? h('button', { class: 'btn small ghost', onclick: () => editCounts(t.key) }, '✎ הגדר/ערוך סיכומי קודים (counts) לשאלה זו') : null, h('button', { class: 'btn small ghost', onclick: () => viewStep2() }, '← לסקירה (התאמת מילון / אישור)')), t.question ? h('p', { class: 'muted' }, t.question.slice(0, 230)) : null,
           h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'תשובה'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, `${LEVEL_HE[l]} (${LETTER[l]})`)))),
             h('tbody', null, ...sums.map(tr), ...body.map(tr)))), ...t.notes.map(n => h('div', { class: 'muted', style: 'color:var(--red)' }, '⚠ ' + n)))));
     });
@@ -380,7 +397,7 @@ function renderTables(host, R) {
 /* ------------------------------------------------------------------ step 3 */
 async function viewStep3() {
   setStep(3);
-  const main = $('#main'); main.replaceChildren(h('h1', null, 'שלב 3 · הרצה'));
+  const main = $('#main'); main.replaceChildren(backBar(viewStep2, 'חזרה לסקירה (עריכת התאמות וסיכומים)'), h('h1', null, 'שלב 3 · הרצה'));
   await refreshReview();
   const pend = S.review.pending;
   const card = h('div', { class: 'card' });
@@ -420,7 +437,7 @@ function renderResult(host, r) {
 /* ------------------------------------------------------------------ step 4 */
 async function viewStep4() {
   setStep(4);
-  const main = $('#main'); main.replaceChildren(h('h1', null, 'שלב 4 · שמירה כתבנית'));
+  const main = $('#main'); main.replaceChildren(backBar(viewStep3, 'חזרה להרצה ולתוצאות'), h('h1', null, 'שלב 4 · שמירה כתבנית'));
   const tpls = await api('/library/templates');
   const name = h('input', { type: 'text', value: S.review.mapping.project.name || '' });
   const client = h('input', { type: 'text' }); const tracker = h('input', { type: 'text' });
@@ -459,6 +476,7 @@ async function boot() {
   $('#nav-home').onclick = viewStep1; $('#nav-lib').onclick = () => viewLibrary().catch(e => toast('⚠ ' + e.message));
   $('#nav-user').onclick = async () => { const n = await askText('שם משתמש (יירשם ביומן ההחלטות):', user()); if (n != null) setUser(n); };
   try { const v = await api('/version'); $('#foot').textContent = `Impact360 SAV Runner · גרסה ${v.app_version} · build ${v.build_time} · מילון: ${v.dictionary || '—'} · אין קריאות רשת החוצה`; } catch (e) { $('#foot').textContent = 'אין חיבור לשרת'; }
+  document.querySelectorAll('#steps li').forEach(li => li.onclick = () => goStep(+li.dataset.step));
   viewStep1();
   if (!user()) { const n = await askText('מה שמך? (יירשם ביומן ההחלטות לצד כל אישור)'); if (n) setUser(n); }
 }
