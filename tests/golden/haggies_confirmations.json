@@ -1,0 +1,14 @@
+{
+  "note": "Researcher decisions for Huggies FreeFeel (SAV 15422). Decisions only - no respondent data.",
+  "brand": "האגיס",
+  "confirmed": ["q31", "q33", "q49", "q50", "q53", "q52", "vq36_coded", "vq37_coded"],
+  "nets": {
+    "vq32_coded": {"SEMIAEX-VD#01": {"exclude": ["vq32_codedr1"]}},
+    "vq36_coded": {"LIKES#01": {"exclude": ["vq36_codedr1"]}},
+    "vq37_coded": {"DISLIKES#01": {"exclude": ["vq37_codedr1", "vq37_codedr2", "vq37_codedr3"]}},
+    "vq5_coded": {"UNEXPOSEB#01": {"include": ["vq5_codedr3"]}},
+    "vSLOGAN_coded": {"SLOGAN#01": {"include": ["vSLOGAN_codedr2"]}},
+    "vSPONTIMPRESSION_coded": {"SPONTIMPRESSION#01": {"exclude": ["vSPONTIMPRESSION_codedr1"]}}
+  },
+  "q31_nets": {"SEMIAEX-CAT#01": {"include": ["q31r1"]}}
+}

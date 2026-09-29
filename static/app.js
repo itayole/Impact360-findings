@@ -1,0 +1,465 @@
+/* Impact360 SAV Runner — frontend (no framework, no build, no external requests).
+   The browser never computes methodology: every number shown comes from the server (preview = same code as the workbook). */
+'use strict';
+
+const LEVELS = ['sample', 'exposed', 'notexposed', 'customers', 'noncust'];
+const LEVEL_HE = { sample: 'מדגם', exposed: 'נחשפים', notexposed: 'לא נחשפים', customers: 'לקוחות', noncust: 'לא לקוחות' };
+const LETTER = { sample: 'A', exposed: 'B', notexposed: 'C', customers: 'D', noncust: 'E' };
+const ROLE_HE = { '': '— לא מסר בריף —', main: 'מסר ראשי', sec1: 'משני 1', sec2: 'משני 2', buy: 'קנייה / ניסיון' };
+const CONF_HE = { exact: 'exact', alias: 'alias', template: 'תבנית', tag: 'תג', manual: 'ידני', structure: 'מבנה', keyword: 'keyword', 'fuzzy-high': 'fuzzy', 'fuzzy-low': 'fuzzy', none: 'ללא' };
+
+const S = { project: null, review: null, step: 1, netBlock: null, nets: {}, activeNet: null, catalog: null, dictVars: null };
+const $ = (s, r = document) => r.querySelector(s);
+
+/* ------------------------------------------------------------------ helpers */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'disabled' || k === 'selected' || k === 'open' || k === 'value') el[k] = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 3500); }
+function user() { try { return localStorage.getItem('i360user') || ''; } catch (e) { return S._user || ''; } }
+function setUser(v) { try { localStorage.setItem('i360user', v); } catch (e) { S._user = v; } $('#nav-user').textContent = '👤 ' + (v || 'ללא שם'); }
+async function api(path, opts = {}) {
+  const o = { method: 'GET', headers: { 'X-User': encodeURIComponent(user() || 'anonymous') }, ...opts };
+  if (opts.json !== undefined) { o.method = opts.method || 'POST'; o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opts.json); }
+  const r = await fetch('/api' + path, o);
+  let data = null;
+  try { data = await r.json(); } catch (e) { /* not json */ }
+  if (!r.ok) throw new Error((data && data.detail) || ('שגיאה ' + r.status));
+  return data;
+}
+const pctFmt = (v, kind) => v == null ? '' : (kind === 'mean' ? v.toFixed(2) : v.toFixed(1));
+function busy(btn, on) { btn.disabled = on; btn.dataset.txt = btn.dataset.txt || btn.textContent; btn.textContent = on ? 'רגע…' : btn.dataset.txt; }
+async function guarded(btn, fn) { busy(btn, true); try { await fn(); } catch (e) { toast('⚠ ' + e.message); } finally { busy(btn, false); } }
+
+function askText(msg, def = '') {   // in-page replacement for prompt() (not available in every embedded browser)
+  return new Promise(res => {
+    const inp = h('input', { type: 'text', value: def, style: 'width:100%' });
+    const done = v => { ov.remove(); res(v); };
+    const ov = h('div', { class: 'overlay' }, h('div', { class: 'dlg' }, h('div', { style: 'margin-bottom:8px;font-weight:600' }, msg), inp,
+      h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn', onclick: () => done(inp.value.trim()) }, 'אישור'), h('button', { class: 'btn ghost', onclick: () => done(null) }, 'ביטול'))));
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(inp.value.trim()); if (e.key === 'Escape') done(null); });
+    document.body.append(ov); inp.focus();
+  });
+}
+
+function setStep(n) {
+  S.step = n;
+  document.querySelectorAll('#steps li').forEach(li => {
+    const k = +li.dataset.step;
+    li.className = k === n ? 'active' : (k < n ? 'done' : '');
+  });
+}
+
+/* ------------------------------------------------------------------ step 1 */
+async function viewStep1() {
+  setStep(1);
+  const main = $('#main'); main.replaceChildren();
+  let projects = [];
+  try { projects = await api('/projects'); } catch (e) { /* ignore */ }
+  const state = { sav: null, qnr: null, created: null };
+
+  const info = h('div');
+  const form = h('div', { class: 'card' });
+  const savInput = h('input', { type: 'file', accept: '.sav', style: 'display:none' });
+  const qnrInput = h('input', { type: 'file', accept: '.docx' });
+  const drop = h('div', { class: 'drop' }, 'גרור לכאן את קובץ ה-SAV או לחץ לבחירה');
+  const nameIn = h('input', { type: 'text', placeholder: 'למשל: האגיס FreeFeel' });
+  drop.onclick = () => savInput.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); pickSav(e.dataTransfer.files[0]); };
+  savInput.onchange = () => pickSav(savInput.files[0]);
+  function pickSav(f) {
+    if (!f) return;
+    if (!/\.sav$/i.test(f.name)) return toast('יש לבחור קובץ .sav');
+    state.sav = f; drop.textContent = '✔ ' + f.name + ' (' + (f.size / 1048576).toFixed(1) + 'MB)';
+    if (!nameIn.value) nameIn.value = f.name.replace(/\.sav$/i, '');
+  }
+  const upBtn = h('button', { class: 'btn' }, 'העלה וקרא את הקובץ');
+  upBtn.onclick = () => guarded(upBtn, async () => {
+    if (!state.sav) throw new Error('בחר/י קובץ SAV');
+    const fd = new FormData();
+    fd.append('sav', state.sav); if (qnrInput.files[0]) fd.append('qnr', qnrInput.files[0]); fd.append('name', nameIn.value);
+    const r = await fetch('/api/projects', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
+    const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'שגיאה');
+    state.created = d; renderNext(d);
+  });
+  form.append(h('h2', null, 'פרויקט חדש'), h('p', { class: 'muted' }, 'קובץ ה-SAV נשאר על השרת הפנימי ונמחק אוטומטית לפי מדיניות הניקוי.'), drop, savInput,
+    h('div', { class: 'row', style: 'margin-top:12px' }, h('label', { class: 'f' }, 'שם הפרויקט', nameIn),
+      h('label', { class: 'f' }, 'שאלון Word (אופציונלי — לאימות ולסדר המסרים)', qnrInput)),
+    h('div', { style: 'margin-top:12px' }, upBtn), info);
+
+  function renderNext(d) {
+    info.replaceChildren();
+    const brand = h('select', null, ...d.brand_options.map(b => h('option', { value: b }, b)));
+    const camp = h('input', { type: 'text', placeholder: 'I360-2026-0XX' });
+    const omni = h('input', { type: 'checkbox' });
+    let tpl = '';
+    const tplBox = h('div');
+    if (d.template_suggestions.length) {
+      tplBox.append(h('div', { class: 'alert warn' }, 'נמצאה תבנית דומה מאותו מעקב. ההצעה לא מופעלת בשקט — בחר/י אם להחיל:'));
+      const opts = [h('label', null, h('input', { type: 'radio', name: 'tpl', checked: true, onchange: () => tpl = '' }), ' לא להחיל תבנית (זיהוי מחדש)')];
+      d.template_suggestions.forEach(t => opts.push(h('div', null, h('label', null, h('input', { type: 'radio', name: 'tpl', onchange: () => tpl = t.id }),
+        ` החל '${t.name}' v${t.version} · דמיון ${(t.similarity * 100).toFixed(0)}%`))));
+      tplBox.append(...opts);
+    }
+    const warns = d.questionnaire_warnings.map(w => h('div', { class: 'alert warn' }, '⚠ ' + w));
+    const go = h('button', { class: 'btn gold' }, 'המשך לסקירה ←');
+    go.onclick = () => guarded(go, async () => {
+      S.project = d.project;
+      S.review = await api(`/projects/${d.project.id}/profile`, { json: { brand: brand.value, campaign_id: camp.value, omnibus: omni.checked, template_id: tpl || null } });
+      viewStep2();
+    });
+    info.append(h('hr'), h('div', { class: 'alert ok' }, `נקרא: N=${d.project.n}, ${d.n_columns} עמודות.`), ...warns,
+      h('div', { class: 'row' }, h('label', { class: 'f' }, 'מותג נבדק', brand), h('label', { class: 'f' }, 'CAMPAIGN_ID (אופציונלי)', camp),
+        h('label', { class: 'f', style: 'min-width:120px' }, 'אומניבוס?', h('span', null, omni, ' כן'))),
+      tplBox, h('div', { style: 'margin-top:12px' }, go));
+  }
+
+  main.append(h('h1', null, 'שלב 1 · פרויקט'), form);
+  if (projects.length) {
+    const t = h('table', null, h('thead', null, h('tr', null, ...['פרויקט', 'קובץ', 'שלב', 'עודכן', ''].map(x => h('th', null, x)))),
+      h('tbody', null, ...projects.slice(0, 15).map(p => h('tr', null, h('td', null, p.name), h('td', null, p.sav_name),
+        h('td', null, ({ uploaded: 'הועלה', profiled: 'זוהה', reviewed: 'נסקר', done: 'הופק' })[p.stage] || p.stage), h('td', null, (p.updated_at || p.created_at || '').replace('T', ' ')),
+        h('td', null, h('button', { class: 'btn small ghost', onclick: () => resume(p.id) }, 'המשך'))))));
+    main.append(h('div', { class: 'card' }, h('h2', null, 'פרויקטים אחרונים'), h('div', { class: 'tablewrap', style: 'margin-top:8px' }, t)));
+  }
+}
+async function resume(pid) {
+  try {
+    S.project = await api('/projects/' + pid);
+    if (!S.project.has_mapping) return toast('לפרויקט זה טרם הורץ פרופיל — העלה/י את הקובץ שוב בשלב 1');
+    S.review = await api(`/projects/${pid}/review`);
+    S.project.has_output ? viewStep3() : viewStep2();
+  } catch (e) { toast('⚠ ' + e.message); }
+}
+
+/* ------------------------------------------------------------------ step 2 */
+async function refreshReview() { S.review = await api(`/projects/${S.project.id}/review`); }
+async function patch(body) { S.review = await api(`/projects/${S.project.id}/mapping`, { method: 'PUT', json: body }); }
+
+function sec(title, pill, pillClass, ...body) {
+  return h('details', { class: 'sec', open: true }, h('summary', null, h('h2', null, title), pill ? h('span', { class: 'pill ' + (pillClass || '') }, pill) : null), h('div', { class: 'body' }, ...body));
+}
+
+async function viewStep2() {
+  setStep(2);
+  const main = $('#main'); main.replaceChildren();
+  const R = S.review, M = R.mapping, pid = S.project.id;
+  main.append(h('h1', null, `שלב 2 · סקירה — ${M.project.name || ''}`));
+  const q = M.questionnaire;
+  if (M.template_diff) {
+    const d = M.template_diff;
+    main.append(h('div', { class: 'alert ok' }, `הוחלה תבנית '${d.template.name}' v${d.template.version}: ${d.applied.length} בלוקים נלקחו מהתבנית. `,
+      d.new.length ? `בלוקים חדשים: ${d.new.join(', ')}. ` : '', d.missing.length ? `חסרים מול התבנית: ${d.missing.join(', ')}. ` : '',
+      d.structure_changed.length ? `שינוי מבנה: ${d.structure_changed.join(', ')}.` : ''));
+  }
+  main.append(secExposure(M, R), secCustomers(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
+  const next = h('button', { class: 'btn gold' }, 'המשך להרצה ←');
+  next.onclick = () => viewStep3();
+  main.append(h('div', { style: 'margin-top:14px' }, next));
+}
+
+function levelBases(R) { const b = R.levels.bases; return LEVELS.map(l => `${LEVEL_HE[l]}: ${b[l]}`).join(' · '); }
+
+function secExposure(M, R) {
+  const comps = M.exposure.components;
+  const rows = comps.map((c, i) => h('tr', null,
+    h('td', null, h('input', { type: 'checkbox', checked: c.enabled !== false, onchange: async e => { await patch({ exposure_enabled: { [i]: e.target.checked } }); viewStep2(); } })),
+    h('td', null, c.question || (Array.isArray(c.var) ? c.var.join(', ') : c.var)),
+    h('td', null, h('code', null, c.dict_var || '—')), h('td', null, c.kind === 'any_of' ? 'אחד מתוך רשימה' : 'שאלה בודדת')));
+  const chk = R.levels.checks[0];
+  return sec('1. חשיפה (Total Exposed)', `נחשפים: ${R.levels.bases.exposed}`, '',
+    h('p', { class: 'muted' }, 'נחשפים = איחוד שאלות המדיה שסומנו. סמן/י או בטל/י רכיבים; המספר מתעדכן.'),
+    h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['כלול', 'שאלת מדיה', 'משתנה מילון', 'סוג'].map(x => h('th', null, x)))), h('tbody', null, ...rows))),
+    chk ? h('div', { class: 'alert ' + (chk[2] === 'OK' ? 'ok' : 'warn') }, `${chk[0]}: ${chk[1]}`) : null,
+    h('div', { class: 'muted' }, levelBases(R)));
+}
+
+function secCustomers(M, R) {
+  const opts = M.customer_options || [];
+  const cur = M.customer && M.customer.var;
+  const sel = h('select', { onchange: async e => { await patch({ customer_var: e.target.value }); viewStep2(); } },
+    ...opts.map(o => h('option', { value: o.var, selected: o.var === cur }, o.text.replace(/\[[^\]]*\]/g, '').trim())));
+  return sec('2. לקוחות (קנו ב-3 החודשים האחרונים)', `לקוחות: ${R.levels.bases.customers} · לא לקוחות: ${R.levels.bases.noncust}`, '',
+    opts.length ? h('label', { class: 'f' }, 'שורת המותג הנבדק בשאלת השימוש (ריק = לא לקוח)', sel) : h('div', { class: 'alert warn' }, 'לא זוהתה שאלת שימוש ל-3 חודשים — עמודות הלקוחות יהיו ריקות.'),
+    M.customer ? h('p', { class: 'muted' }, 'משתנה: ', h('code', null, M.customer.var), ' · הבחירה חייבת להיות המותג הנבדק — המערכת לא מנחשת.') : null);
+}
+
+async function loadDictVars() {
+  if (!S.dictVars) S.dictVars = await api('/library/dictionary/vars');
+  return S.dictVars;
+}
+
+function secQuestions(M, R) {
+  const pending = R.pending.length;
+  let onlyPending = pending > 0;
+  const box = h('div');
+  const dl = h('datalist', { id: 'dvars' });
+  loadDictVars().then(v => v.forEach(x => dl.append(h('option', { value: x.var }, x.title))));
+  function render() {
+    box.replaceChildren();
+    const qs = M.questions.filter(e => !onlyPending || (e.include !== false && e.needs_approval) || (e.warnings || []).length);
+    const rows = qs.map(e => {
+      const inp = h('input', { type: 'text', class: 'inline-input', list: 'dvars', value: e.dict_var || '', placeholder: '(ללא — ניתוח בלבד)' });
+      const apply = h('button', { class: 'btn small ghost', onclick: () => guarded(apply, async () => { if ((inp.value || '') !== (e.dict_var || '')) { await patch({ remap: { [e.key]: inp.value || null } }); viewStep2(); } }) }, 'החל');
+      const appr = e.needs_approval ? h('label', null, h('input', { type: 'checkbox', checked: !!e.confirmed, onchange: async ev => { await patch({ questions: { [e.key]: { confirmed: ev.target.checked } } }); viewStep2(); } }), ' אשר') : (e.dict_var ? h('span', { class: 'muted' }, 'מהימן') : null);
+      const inc = h('label', null, h('input', { type: 'checkbox', checked: e.include !== false, onchange: async ev => { await patch({ questions: { [e.key]: { include: ev.target.checked } } }); viewStep2(); } }), ' רלוונטי');
+      return h('tr', { class: (e.include === false ? 'off ' : '') + (e.needs_approval ? 'need' : '') },
+        h('td', null, h('code', null, e.key)), h('td', null, (e.question || '').slice(0, 90), (e.warnings || []).map(w => h('div', { class: 'muted' }, '⚠ ' + w))),
+        h('td', null, e.type || ''), h('td', null, inp, ' ', apply, e.dict_title ? h('div', { class: 'muted' }, e.dict_title) : null),
+        h('td', null, h('span', { class: 'badge ' + e.confidence }, CONF_HE[e.confidence] || e.confidence), e.qnr_item ? h('div', { class: 'muted' }, 'בשאלון: ' + e.qnr_item.tag) : null), h('td', null, appr), h('td', null, inc));
+    });
+    box.append(h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בלוק', 'שאלה', 'סוג', 'משתנה מילון', 'ביטחון', 'אישור', 'כלול'].map(x => h('th', null, x)))), h('tbody', null, ...rows))));
+  }
+  const filt = h('label', null, h('input', { type: 'checkbox', checked: onlyPending, onchange: e => { onlyPending = e.target.checked; render(); } }), ' הצג רק מה שדורש החלטה');
+  const all = h('button', { class: 'btn small', onclick: () => guarded(all, async () => { await patch({ confirm_all: true }); viewStep2(); }) }, 'אשר את כל ההתאמות המוצעות');
+  render();
+  return sec('3. שאלות ומילון', pending ? `${pending} דורשות החלטה` : 'הכול מאושר', pending ? 'need' : 'okp',
+    h('p', { class: 'muted' }, 'התאמה שאינה exact/alias/תבנית היא הצעה בלבד: אינה נכנסת ל-DATA_לייבוא עד אישור. אפשר להחליף משתנה מילון ידנית (החל). בלוק שאינו רלוונטי (אומניבוס זר) — בטל/י "כלול".'),
+    h('div', { class: 'row', style: 'margin-bottom:8px' }, filt, pending ? all : null), dl, box);
+}
+
+function secMessages(M, R) {
+  const mo = R.messages.options;
+  if (!mo.length) return sec('4. מסרים', 'לא נמצאה שאלת MAIN_MESSAGE_TAKEOUT', '', h('p', { class: 'muted' }, 'אין מה לאשר.'));
+  const roles = mo.map(o => o.role);
+  const sug = R.messages.suggestion;
+  const sels = mo.map((o, i) => h('select', { onchange: e => roles[i] = e.target.value }, ...['', 'main', 'sec1', 'sec2', 'buy'].map(r => h('option', { value: r, selected: r === o.role }, ROLE_HE[r]))));
+  const map = { main: 'main', secondary: 'sec1', generic: 'buy' };
+  const apply = h('button', { class: 'btn small ghost' }, 'החל את ההצעה מהשאלון');
+  if (sug && sug.order && sug.order.length === mo.length) {
+    apply.onclick = () => { let sec2 = false; sug.order.forEach((m, i) => { let r = map[m.role] || ''; if (m.role === 'secondary') { r = sec2 ? 'sec2' : 'sec1'; sec2 = true; } roles[i] = r; sels[i].value = r; }); toast('ההצעה הוצבה — יש ללחוץ "אשר סדר מסרים"'); };
+  } else apply.disabled = true;
+  const save = h('button', { class: 'btn' }, 'אשר סדר מסרים');
+  save.onclick = () => guarded(save, async () => { await patch({ roles }); toast('סדר המסרים נשמר'); viewStep2(); });
+  const rows = mo.map((o, i) => h('tr', null, h('td', null, i + 1), h('td', null, o.label), h('td', null, sels[i]), h('td', { class: 'muted' }, sug && sug.order && sug.order[i] ? `שאלון: ${sug.order[i].role || '—'}` : '')));
+  return sec('4. מסרים (MAIN / TOTAL MESSAGE_TAKEOUT)', '', '',
+    h('p', { class: 'muted' }, 'ברירת המחדל = סדר האפשרויות בשאלון (ראשי, משני 1, משני 2, קנייה/ניסיון). ההצעה מהשאלון אינה מופעלת בלי אישור.'),
+    h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['#', 'נוסח המסר', 'תפקיד', 'רמז'].map(x => h('th', null, x)))), h('tbody', null, ...rows))),
+    h('div', { class: 'row', style: 'margin-top:8px' }, apply, save));
+}
+
+/* -------- Net Builder (server-side live results) */
+async function secNets() {
+  const box = h('div');
+  try { S.catalog = await api(`/projects/${S.project.id}/catalog`); } catch (e) { S.catalog = []; }
+  const rank = b => (b.wanted.length ? 0 : (b.type === 'coded_open' ? 1 : (b.dict_var ? 2 : 3)));
+  const blocks = S.catalog.slice().sort((a, b) => rank(a) - rank(b));
+  if (!blocks.length) return sec('5. סיכומי קודים (Net Builder)', '', '', h('p', { class: 'muted' }, 'אין שאלות מקודדות/רב-ברירה בפרויקט.'));
+  const localNets = {}; blocks.forEach(b => localNets[b.key] = JSON.parse(JSON.stringify(b.nets || {})));
+  S.netBlock = S.netBlock && blocks.find(b => b.key === S.netBlock) ? S.netBlock : blocks[0].key;
+  S.activeNet = null;
+  let timer = null;
+
+  function netDefs(b) {
+    const defs = b.wanted.map(w => ({ key: w.united, label: w.label, dict: true }));
+    Object.keys(localNets[b.key]).forEach(k => { if (!defs.find(d => d.key === k)) defs.push({ key: k, label: localNets[b.key][k].label || k, dict: false }); });
+    return defs;
+  }
+  async function render() {
+    box.replaceChildren();
+    const b = blocks.find(x => x.key === S.netBlock);
+    const nets = localNets[b.key];
+    const tabs = h('div', { class: 'tabs' }, ...blocks.map(x => h('span', { class: 'tab' + (x.key === b.key ? ' active' : ''), onclick: () => { S.netBlock = x.key; S.activeNet = null; render(); } },
+      x.key, Object.keys(localNets[x.key]).length ? h('span', { class: 'dot' }) : null)));
+    const defs = netDefs(b);
+    if (!S.activeNet || !defs.find(d => d.key === S.activeNet)) S.activeNet = defs.length ? defs[0].key : null;
+    const cur = S.activeNet ? nets[S.activeNet] : null;
+    const setOf = () => new Set(cur ? (cur.include || cur.exclude || []) : []);
+    const mode = cur ? (cur.include ? 'include' : 'exclude') : 'include';
+
+    const left = h('div', null, h('div', { class: 'muted', style: 'margin-bottom:6px' }, 'סיכומים לשאלה: ' + (b.dict_var || 'ללא משתנה מילון')),
+      ...defs.map(d => h('div', { class: 'netitem' + (d.key === S.activeNet ? ' active' : ''), onclick: () => { S.activeNet = d.key; render(); } },
+        h('div', { class: 't' }, d.label), h('div', { class: 'muted' }, d.dict ? d.key : 'סיכום בשם חופשי (לא מיובא ל-DATA)'),
+        nets[d.key] ? h('div', { class: 'muted' }, (nets[d.key].include ? 'נטו: ' + nets[d.key].include.length + ' קודים' : 'כל תשובה מלבד ' + (nets[d.key].exclude || []).length)) : h('div', { class: 'muted' }, 'לא הוגדר'))),
+      h('button', { class: 'btn small ghost', onclick: async () => { const n = await askText('שם הסיכום החופשי:'); if (!n) return; const k = 'USER:' + Math.random().toString(36).slice(2, 8); nets[k] = { include: [], label: n }; S.activeNet = k; render(); } }, '+ סיכום חדש'));
+
+    const right = h('div');
+    if (S.activeNet) {
+      right.append(h('div', { class: 'row', style: 'margin-bottom:8px' },
+        h('label', null, h('input', { type: 'radio', name: 'nm', checked: mode === 'include', onchange: () => { const s = setOf(); nets[S.activeNet] = { ...(cur || {}), include: [...s] }; delete nets[S.activeNet].exclude; change(); } }), ' נטו = לפחות אחד מהמסומנים'),
+        h('label', null, h('input', { type: 'radio', name: 'nm', checked: mode === 'exclude', onchange: () => { const s = setOf(); nets[S.activeNet] = { ...(cur || {}), exclude: [...s] }; delete nets[S.activeNet].include; change(); } }), ' "כל תשובה" = הכול מלבד המסומנים (למשל "לא זוכר")'),
+        h('button', { class: 'btn small ghost', onclick: () => { delete nets[S.activeNet]; change(); } }, 'נקה הגדרה')));
+    } else right.append(h('div', { class: 'alert warn' }, 'בחר/י סיכום מהרשימה משמאל כדי להגדיר אילו קודים נכללים בו.'));
+    const tblHost = h('div', { class: 'tablewrap' }, 'טוען תוצאות…'); right.append(tblHost);
+    const netHost = h('div', { style: 'margin-top:10px' }); right.append(netHost);
+    const saveBtn = h('button', { class: 'btn', style: 'margin-top:10px' }, 'שמור סיכומים לשאלה זו');
+    saveBtn.onclick = () => guarded(saveBtn, async () => { await patch({ questions: { [b.key]: { nets: localNets[b.key] } } }); toast('נשמר'); });
+    right.append(saveBtn);
+    box.append(tabs, h('div', { class: 'split' }, left, right));
+
+    let pv;
+    try { pv = await api(`/projects/${S.project.id}/preview`, { json: { block: b.key, nets: localNets[b.key] } }); } catch (e) { tblHost.textContent = '⚠ ' + e.message; return; }
+    const sel = setOf();
+    const hdr = h('tr', null, h('th', null, ''), h('th', null, 'קוד'), ...LEVELS.map(l => h('th', null, `${LEVEL_HE[l]} (${LETTER[l]})`, h('div', { class: 'muted', style: 'color:#dbe4f5' }, 'N=' + pv.bases[l]))));
+    const rows = pv.codes.map(c => h('tr', null,
+      h('td', null, S.activeNet ? h('input', { type: 'checkbox', checked: sel.has(c.var), onchange: e => { const s = setOf(); e.target.checked ? s.add(c.var) : s.delete(c.var); const k = mode === 'include' ? 'include' : 'exclude'; nets[S.activeNet] = { ...(cur || {}), [k]: [...s] }; change(); } }) : ''),
+      h('td', null, c.label), ...LEVELS.map(l => valueCell(c, l, true))));
+    tblHost.replaceChildren(h('table', null, h('thead', null, hdr), h('tbody', null, ...rows)));
+    if (pv.nets.length) netHost.append(h('h2', { style: 'font-size:15px;margin:6px 0' }, 'תוצאות הסיכומים (חיות, אותה חישוביות כמו באקסל)'),
+      h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'סיכום'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, LEVEL_HE[l] + ' (' + LETTER[l] + ')')))),
+        h('tbody', null, ...pv.nets.map(n => h('tr', { class: 'sum' }, h('td', null, n.label), h('td', null, n.united ? h('code', null, n.united) : h('span', { class: 'muted' }, 'חופשי')), ...LEVELS.map(l => valueCell(n, l, false))))))));
+    if (pv.base_note === 'all') netHost.append(h('div', { class: 'muted' }, 'בסיס: כלל המדגם (שאלת המשך מותנית בחשיפה).'));
+  }
+  function valueCell(row, l, withCount) {
+    const v = row.values[l], n = row.n[l];
+    return h('td', { class: 'num' + (v != null && n < 30 ? ' low' : '') }, v == null ? '' : pctFmt(v, row.kind), row.letters[l] ? h('span', { class: 'sig' }, row.letters[l]) : null,
+      withCount && row.counts ? h('div', { class: 'muted' }, 'n=' + row.counts[l]) : null);
+  }
+  function change() { clearTimeout(timer); timer = setTimeout(render, 150); }
+  render();
+  const pending = blocks.filter(b => b.wanted.length && !Object.keys(b.nets || {}).length).length;
+  return sec('5. סיכומי קודים (Net Builder)', pending ? `${pending} שאלות עם סיכומי מילון שטרם הוגדרו` : '', pending ? 'need' : '',
+    h('p', { class: 'muted' }, 'לכל שאלה מקודדת: סמן/י אילו קודים בונים כל סיכום מהמילון (SLOGAN#01, SPONTIMP_CORRECT, SEMIAEX-VD_* ועוד) או סיכום בשם חופשי. המערכת לא מנחשת את הסלוגן/המסר הנכון.'), box);
+}
+
+function secWarnings() {
+  const host = h('div', 'טוען…');
+  api(`/projects/${S.project.id}/warnings`).then(w => {
+    host.replaceChildren(w.length ? h('ul', null, ...w.map(x => h('li', null, x.text))) : h('div', { class: 'alert ok' }, 'אין אזהרות פתוחות.'));
+    pill.textContent = w.length + ' אזהרות'; pill.className = 'pill ' + (w.length ? 'need' : 'okp');
+  }).catch(e => host.textContent = '⚠ ' + e.message);
+  const pill = h('span', { class: 'pill' }, '…');
+  return h('details', { class: 'sec' }, h('summary', null, h('h2', null, '6. אזהרות'), pill), h('div', { class: 'body' }, host));
+}
+
+/* -------- findings tables (verification): every question, 5 columns, letters, n per answer */
+function secResults(open) {
+  const host = h('div', null, h('button', { class: 'btn small', onclick: e => load(e.target) }, 'טען טבלאות ממצאים'));
+  async function load(btn) {
+    btn.disabled = true; btn.textContent = 'מחשב…';
+    try { renderTables(host, await api(`/projects/${S.project.id}/results`)); } catch (e) { host.replaceChildren(h('div', { class: 'alert err' }, e.message)); }
+  }
+  const d = h('details', { class: 'sec', open: !!open }, h('summary', null, h('h2', null, '7. ממצאים — טבלאות לאימות'), h('span', { class: 'pill' }, 'מדגם · נחשפים · לא נחשפים · לקוחות · לא לקוחות')),
+    h('div', { class: 'body' }, h('p', { class: 'muted' }, 'כל השאלות כפי שיופיעו באקסל, עם n (מספר משיבים) לכל תשובה ואותיות מובהקות (אות גדולה 95%, קטנה 90%; B מול C, D מול E). ערך אדום = בסיס קטן מ-30. אם משהו לא נראה נכון, חזור/י לסעיף 3 והחלף/אשר את ההתאמה.'), host));
+  d.addEventListener('toggle', () => { if (d.open && !host.dataset.loaded) { host.dataset.loaded = 1; load(host.querySelector('button')); } });
+  if (open) setTimeout(() => { if (!host.dataset.loaded) { host.dataset.loaded = 1; load(host.querySelector('button')); } }, 0);
+  return d;
+}
+
+function renderTables(host, R) {
+  host.replaceChildren();
+  let showN = true, q = '', onlyDict = false;
+  const list = h('div');
+  const bar = h('div', { class: 'row', style: 'margin-bottom:8px' },
+    h('input', { type: 'text', placeholder: 'חיפוש שאלה / משתנה…', oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } }),
+    h('label', null, h('input', { type: 'checkbox', checked: true, onchange: e => { showN = e.target.checked; draw(); } }), ' הצג n לכל תשובה'),
+    h('label', null, h('input', { type: 'checkbox', onchange: e => { onlyDict = e.target.checked; draw(); } }), ' רק שאלות שמופו למילון'),
+    h('span', { class: 'muted' }, LEVELS.map(l => `${LETTER[l]}=${LEVEL_HE[l]} (N=${R.bases[l]})`).join(' · ')));
+  function cell(r, l) {
+    const v = r.values[l], n = r.n[l];
+    return h('td', { class: 'num' + (v != null && n < R.min_n ? ' low' : '') }, v == null ? '' : pctFmt(v, r.kind), r.letters[l] ? h('span', { class: 'sig' }, r.letters[l]) : null,
+      showN && v != null ? h('div', { class: 'muted' }, r.counts[l] != null ? `n=${r.counts[l]} מתוך ${n}` : `בסיס ${n}`) : null);
+  }
+  function draw() {
+    list.replaceChildren();
+    R.tables.filter(t => (!onlyDict || t.dict_var) && (!q || (t.key + ' ' + t.title + ' ' + t.question + ' ' + (t.dict_var || '')).toLowerCase().includes(q))).forEach(t => {
+      const sums = t.rows.filter(r => r.section === 'summary'), body = t.rows.filter(r => r.section !== 'summary');
+      const tr = r => h('tr', { class: r.section === 'summary' ? 'sum' : '' }, h('td', null, r.label, r.note ? h('div', { class: 'muted' }, r.note) : null), h('td', null, r.united ? h('code', null, r.united) : ''), ...LEVELS.map(l => cell(r, l)));
+      const conf = t.confidence ? h('span', { class: 'badge ' + t.confidence, style: 'margin-inline-start:8px' }, CONF_HE[t.confidence] || t.confidence) : null;
+      list.append(h('details', { class: 'sec' }, h('summary', null, h('b', null, t.title), h('code', null, t.key), conf, h('span', { class: 'pill' }, t.rows.length + ' שורות')),
+        h('div', { class: 'body' }, t.question ? h('p', { class: 'muted' }, t.question.slice(0, 230)) : null,
+          h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'תשובה'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, `${LEVEL_HE[l]} (${LETTER[l]})`)))),
+            h('tbody', null, ...sums.map(tr), ...body.map(tr)))), ...t.notes.map(n => h('div', { class: 'muted', style: 'color:var(--red)' }, '⚠ ' + n)))));
+    });
+    if (!list.children.length) list.append(h('p', { class: 'muted' }, 'אין תוצאות לחיפוש.'));
+  }
+  draw(); host.append(bar, list);
+}
+
+/* ------------------------------------------------------------------ step 3 */
+async function viewStep3() {
+  setStep(3);
+  const main = $('#main'); main.replaceChildren(h('h1', null, 'שלב 3 · הרצה'));
+  await refreshReview();
+  const pend = S.review.pending;
+  const card = h('div', { class: 'card' });
+  const go = h('button', { class: 'btn gold' }, 'הרץ ממצאים');
+  const prog = h('div'); const out = h('div');
+  if (pend.length) card.append(h('div', { class: 'alert warn' }, `שים/י לב: ${pend.length} התאמות לא אושרו (${pend.slice(0, 6).join(', ')}) — הן יופקו כ"ניתוח בלבד" ללא united. ניתן לחזור לשלב 2.`));
+  card.append(h('p', { class: 'muted' }, levelBases(S.review)), go, prog);
+  go.onclick = () => guarded(go, async () => {
+    const { job_id } = await api(`/projects/${S.project.id}/run`, { json: {} });
+    const bar = h('div', { class: 'progress' }, h('div', { style: 'width:0%' })); const lbl = h('div', { class: 'muted' }, 'ממתין…');
+    prog.replaceChildren(bar, lbl);
+    for (;;) {
+      const j = await api('/jobs/' + job_id);
+      bar.firstChild.style.width = j.pct + '%'; lbl.textContent = j.stage;
+      if (j.status === 'error') throw new Error(j.error);
+      if (j.status === 'done') { renderResult(out, j.result); break; }
+      await new Promise(r => setTimeout(r, 700));
+    }
+  });
+  main.append(card, out, secResults(true));
+}
+
+function renderResult(host, r) {
+  host.replaceChildren();
+  const b = r.bases;
+  host.append(h('div', { class: 'card' }, h('h2', null, 'התוצאה'),
+    h('div', { class: 'kv', style: 'margin:8px 0' }, h('b', null, 'מדגם'), 'N=' + b.sample, h('b', null, 'נחשפים'), 'N=' + b.exposed, h('b', null, 'לקוחות / לא לקוחות'), `${b.customers} / ${b.noncust}`,
+      h('b', null, 'הגדרת חשיפה'), (r.exposure.label || '') + ': ' + r.exposure.components.join(' | ')),
+    h('div', { class: 'alert ' + (r.summary.errors.length ? 'err' : 'ok') }, `${r.summary.tables} טבלאות · ${r.summary.slots} משתני מילון · ${r.summary.checks} בקרות · ${r.summary.flagged.length} חריגות · ${r.summary.errors.length} שגיאות`),
+    h('a', { class: 'btn', href: `/api/projects/${S.project.id}/download` }, '⬇ הורד אקסל'), ' ', h('span', { class: 'muted' }, `${r.filename} · ${(r.size / 1024).toFixed(0)}KB · גרסה ${r.build.app_version} · ${r.build.dictionary_version}`)));
+  host.append(h('div', { class: 'card' }, h('h2', null, 'בקרות'), h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בדיקה', 'תוצאה', 'סטטוס'].map(x => h('th', null, x)))),
+    h('tbody', null, ...r.checks.map(c => h('tr', { class: c[2] === 'OK' ? '' : 'need' }, h('td', null, c[0]), h('td', null, c[1]), h('td', null, c[2]))))))));
+  if (r.open_assumptions.length) host.append(h('div', { class: 'card' }, h('h2', null, 'הנחות פתוחות (מופיעות גם בגליון הגדרות)'), h('ul', null, ...r.open_assumptions.slice(0, 60).map(x => h('li', null, x)))));
+  host.append(h('div', null, h('button', { class: 'btn gold', onclick: () => viewStep4() }, 'שמור כתבנית לגל הבא ←')));
+}
+
+/* ------------------------------------------------------------------ step 4 */
+async function viewStep4() {
+  setStep(4);
+  const main = $('#main'); main.replaceChildren(h('h1', null, 'שלב 4 · שמירה כתבנית'));
+  const tpls = await api('/library/templates');
+  const name = h('input', { type: 'text', value: S.review.mapping.project.name || '' });
+  const client = h('input', { type: 'text' }); const tracker = h('input', { type: 'text' });
+  const existing = h('select', null, h('option', { value: '' }, 'תבנית חדשה'), ...tpls.map(t => h('option', { value: t.id }, `גרסה חדשה של: ${t.name} (v${t.version})`)));
+  const save = h('button', { class: 'btn' }, 'שמור תבנית');
+  const res = h('div');
+  save.onclick = () => guarded(save, async () => {
+    const r = await api('/library/templates', { json: { project_id: S.project.id, name: name.value, client: client.value, tracker: tracker.value, template_id: existing.value || null } });
+    res.replaceChildren(h('div', { class: 'alert ok' }, `נשמר: ${r.id} v${r.version}`), h('ul', null, ...r.changes.map(c => h('li', null, c))));
+  });
+  main.append(h('div', { class: 'card' }, h('p', { class: 'muted' }, 'נשמרות החלטות בלבד (מיפוי מאושר, סיכומי קודים, סדר מסרים, הגדרת חשיפה ולקוחות). לא נשמרים נתוני משיבים. אי אפשר לשמור כל עוד יש התאמות שלא אושרו/הוחרגו.'),
+    h('div', { class: 'row' }, h('label', { class: 'f' }, 'שם התבנית', name), h('label', { class: 'f' }, 'לקוח', client), h('label', { class: 'f' }, 'מעקב', tracker), h('label', { class: 'f' }, 'גרסה קיימת?', existing)),
+    h('div', { style: 'margin-top:12px' }, save), res));
+}
+
+/* ------------------------------------------------------------------ library */
+async function viewLibrary() {
+  setStep(0);
+  const main = $('#main'); main.replaceChildren(h('h1', null, 'ספרייה'));
+  const [tpls, dicts] = await Promise.all([api('/library/templates'), api('/library/dictionaries')]);
+  const hist = h('div');
+  const trows = tpls.map(t => h('tr', null, h('td', null, t.name), h('td', null, t.client), h('td', null, t.tracker), h('td', null, 'v' + t.version), h('td', null, t.created_by), h('td', null, t.created_at.replace('T', ' ')),
+    h('td', null, h('button', { class: 'btn small ghost', onclick: async () => { const hs = await api(`/library/templates/${t.id}/history`); hist.replaceChildren(h('h2', null, 'היסטוריה: ' + t.name), ...hs.map(x => h('div', { class: 'card' }, h('b', null, `v${x.version} · ${x.created_by || '—'} · ${x.created_at.replace('T', ' ')}`), h('ul', null, ...x.changes.map(c => h('li', null, c)))))); } }, 'היסטוריה'))));
+  main.append(h('div', { class: 'card' }, h('h2', null, 'תבניות'), tpls.length ? h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['שם', 'לקוח', 'מעקב', 'גרסה', 'עודכן ע"י', 'תאריך', ''].map(x => h('th', null, x)))), h('tbody', null, ...trows))) : h('p', { class: 'muted' }, 'אין תבניות עדיין.'), hist));
+  const up = h('input', { type: 'file', accept: '.xlsx' });
+  const upBtn = h('button', { class: 'btn small' }, 'העלה גרסת מילון חדשה');
+  upBtn.onclick = () => guarded(upBtn, async () => { if (!up.files[0]) throw new Error('בחר/י קובץ'); const fd = new FormData(); fd.append('file', up.files[0]); const r = await fetch('/api/library/dictionaries', { method: 'POST', body: fd }); const d = await r.json(); if (!r.ok) throw new Error(d.detail); toast('הועלה: ' + d.variables + ' משתנים'); viewLibrary(); });
+  main.append(h('div', { class: 'card' }, h('h2', null, 'גרסאות מילון'), h('p', { class: 'muted' }, 'פרויקט חדש משתמש במילון הפעיל. פרויקט קיים נשאר על הגרסה שנבחרה בו (דטרמיניזם).'),
+    h('ul', null, ...dicts.map(d => h('li', null, d.file, d.active ? h('span', { class: 'badge exact', style: 'margin-inline-start:8px' }, 'פעיל') : h('button', { class: 'btn small ghost', style: 'margin-inline-start:8px', onclick: async () => { await api('/library/dictionary/active', { method: 'PUT', json: { file: d.file } }); viewLibrary(); } }, 'הפוך לפעיל'), ' ', h('span', { class: 'muted' }, d.uploaded_at.replace('T', ' '))))),
+    h('div', { class: 'row' }, up, upBtn)));
+}
+
+/* ------------------------------------------------------------------ boot */
+async function boot() {
+  setUser(user());
+  $('#nav-home').onclick = viewStep1; $('#nav-lib').onclick = () => viewLibrary().catch(e => toast('⚠ ' + e.message));
+  $('#nav-user').onclick = async () => { const n = await askText('שם משתמש (יירשם ביומן ההחלטות):', user()); if (n != null) setUser(n); };
+  try { const v = await api('/version'); $('#foot').textContent = `Impact360 SAV Runner · גרסה ${v.app_version} · build ${v.build_time} · מילון: ${v.dictionary || '—'} · אין קריאות רשת החוצה`; } catch (e) { $('#foot').textContent = 'אין חיבור לשרת'; }
+  viewStep1();
+  if (!user()) { const n = await askText('מה שמך? (יירשם ביומן ההחלטות לצד כל אישור)'); if (n) setUser(n); }
+}
+boot();

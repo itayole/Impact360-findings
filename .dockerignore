@@ -1,0 +1,14 @@
+.git
+.claude
+__pycache__
+*.pyc
+.pytest_cache
+Example
+legacy
+tests
+data
+*.sav
+*.md
+!README.md
+Impact360*.xlsx
+!library/*.xlsx

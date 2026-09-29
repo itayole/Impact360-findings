@@ -1,0 +1,2288 @@
+{
+ "project": {
+  "name": "האגיס FREE FEEL",
+  "campaign_id": "I360-2026-XXX",
+  "brand": "האגיס",
+  "sav": "15422 (ID 147851).sav",
+  "dictionary": "/sessions/zealous-epic-mayer/mnt/outputs/impact360-sav-runner/assets/Impact360_import_dictionary.xlsx",
+  "weight_var": null,
+  "n": 406
+ },
+ "exposure": {
+  "label": "נחשפו ל-1+ מדיה (Total Exposed)",
+  "components": [
+   {
+    "var": "q33",
+    "values": [
+     1
+    ],
+    "question": "השאלות הבאות הן על הפרסומת שזה עתה ראית.אנא דמיין/י כאילו ראית את הפרסומת על מסך הטלוויזיה.האם יצא לך לראות פרסומת זו בח",
+    "dict_var": "RECVD",
+    "kind": "single"
+   },
+   {
+    "var": "q49",
+    "values": [
+     1
+    ],
+    "question": "האם במהלך התקופה האחרונה יצא לך לראות באינטרנט את הפרסומות שלפניך להאגיס?[ads.jpg]",
+    "dict_var": "RECIMB",
+    "kind": "single"
+   },
+   {
+    "var": "q50",
+    "values": [
+     1
+    ],
+    "question": "כעת יוצגו לך פרסומות להאגיס שהופיעו בתקופה האחרונה ברשתות החברתיות בפייסבוק, אינסטגרם או טיק טוק.[reshatot.jpg]האם ראית ",
+    "dict_var": "RECINF",
+    "kind": "single"
+   },
+   {
+    "var": "q53",
+    "values": [
+     1
+    ],
+    "question": "האם יצא לך לראות בחודש האחרון פרסומים לפעילות של האגיס בתוכנית ישראל בידור?[53.jpg]האם ראית לפחות אחד מפרסומים אלו?",
+    "dict_var": "REC_ACT",
+    "kind": "single"
+   },
+   {
+    "var": "q56",
+    "values": [
+     1
+    ],
+    "question": "האם יצא לך לראות בחודש האחרון פרסומים לפעילות האגיס בתוכנית של גיא פינס?[56.jpg]",
+    "dict_var": "REC_ACT",
+    "kind": "single"
+   },
+   {
+    "var": "q57",
+    "values": [
+     1
+    ],
+    "question": "האם יצא לך לראות בשבועות האחרונים פרסומים לאירוע ליקיז (LIKYS) של האגיס פריפיל, כדוגמת אלו המוצגים בפניך?[57.jpg]",
+    "dict_var": "REC_ACT",
+    "kind": "single"
+   },
+   {
+    "var": [
+     "q52r1",
+     "q52r2",
+     "q52r3",
+     "q52r4",
+     "q52r5",
+     "q52r6",
+     "q52r7",
+     "q52r8",
+     "q52r9",
+     "q52r10",
+     "q52r11",
+     "q52r12",
+     "q52r13",
+     "q52r14",
+     "q52r15",
+     "q52r16",
+     "q52r17",
+     "q52r18",
+     "q52r19",
+     "q52r20",
+     "q52r21",
+     "q52r22"
+    ],
+    "values": [
+     1
+    ],
+    "question": "האם נחשפת בשבועות האחרונים לפעילות של האגיס עם המשפיענים הבאים באינטרנט?סמני רק את המשפיענים אצלהם נחשפת לפעילות של",
+    "dict_var": "RECINF_BR",
+    "kind": "any_of"
+   }
+  ],
+  "verify_var": "vctq1c1",
+  "note": "union across media channels; verify_var = DP pre-computed 'exposed at least once' if present"
+ },
+ "customer": {
+  "var": "USAGEr1",
+  "customer_values": [
+   1
+  ],
+  "noncustomer_values": [
+   0
+  ],
+  "nan_as": "noncustomer",
+  "source_block": "USAGE",
+  "option_text": "האגיס[huggies.jpg]",
+  "review": "confirm this option is the TESTED brand; NaN treated as non-customer (multi-select unticked)"
+ },
+ "questions": [
+  {
+   "key": "BRANDING",
+   "vars": [
+    "BRANDING"
+   ],
+   "dict_var": "CLEAR_BRANDING",
+   "confidence": "alias",
+   "score": 91.7,
+   "question": "עד כמה לדעתך ברור שהפרסומת היא להאגיס?",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "CLEAR_MESSAGE",
+   "vars": [
+    "CLEAR_MESSAGE"
+   ],
+   "dict_var": "CLEAR_MESSAGE-KC version",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "הרעיון שמאחורי הפרסומת הזו הוא: \"האגיס FREE FEEL (פרי פיל) החיתול החדש של האגיס-החיתול הכי טוב של המותג\".עד כמה הצליחה הפרסומת להעביר רעיו?",
+   "include": true,
+   "review": [
+    "4-point scale -> dictionary variant CLEAR_MESSAGE-KC version"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4
+   },
+   "type": "scale"
+  },
+  {
+   "key": "DESCRIBE",
+   "vars": [
+    "DESCRIBEr1",
+    "DESCRIBEr2",
+    "DESCRIBEr3",
+    "DESCRIBEr4",
+    "DESCRIBEr5",
+    "DESCRIBEr6",
+    "DESCRIBEr7",
+    "DESCRIBEr8",
+    "DESCRIBEr9",
+    "DESCRIBEr10",
+    "DESCRIBEr11",
+    "DESCRIBEr12",
+    "DESCRIBEr13",
+    "DESCRIBEr14",
+    "DESCRIBEr15",
+    "DESCRIBEr16",
+    "DESCRIBEr17",
+    "DESCRIBEr18",
+    "DESCRIBEr19",
+    "DESCRIBEr20"
+   ],
+   "dict_var": "DESCRIBE",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "אילו היית צריכה לתאר את הפרסומת הזו לחבר או לחברה, האם היית מגדירה אותה כ:",
+   "include": true,
+   "review": [],
+   "type": "describe",
+   "attr_names": {
+    "DESCRIBEr1": "מושכת תשומת לב",
+    "DESCRIBEr2": "יצירתית",
+    "DESCRIBEr3": "מקורית",
+    "DESCRIBEr4": "מצחיקה",
+    "DESCRIBEr5": "זכירה",
+    "DESCRIBEr6": "חזקה",
+    "DESCRIBEr7": "ייחודית",
+    "DESCRIBEr8": "מרגשת",
+    "DESCRIBEr9": "נעימה",
+    "DESCRIBEr10": "מחממת את הלב",
+    "DESCRIBEr11": "אקטיבית",
+    "DESCRIBEr12": "שמחה",
+    "DESCRIBEr13": "אנרגטית",
+    "DESCRIBEr14": "משעממת",
+    "DESCRIBEr15": "מעצבנת",
+    "DESCRIBEr16": "מעליבה",
+    "DESCRIBEr17": "אמינה",
+    "DESCRIBEr18": "אינפורמטיבית",
+    "DESCRIBEr19": "מציאותית",
+    "DESCRIBEr20": "עושה את העבודה"
+   }
+  },
+  {
+   "key": "DESIRABILITY",
+   "vars": [
+    "DESIRABILITY"
+   ],
+   "dict_var": "DESIRABILITY",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "באיזו מידה הפרסומת תגרום לך להעדיף את האגיס על פני מותגים אחרים של חיתולים/מוצרים לתינוק?",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "ENJOY",
+   "vars": [
+    "ENJOY"
+   ],
+   "dict_var": "ENJOY",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "עד כמה נהנית לצפות בפרסומת?",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "MAIN_MESSAGE_TAKEOUT",
+   "vars": [
+    "MAIN_MESSAGE_TAKEOUT"
+   ],
+   "dict_var": "MAIN MESSAGE_TAKEOUT",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "מבין הדברים הבאים, איזה מהם את מרגישה כי הפרסומת הדגישה במיוחד לגבי האגיס?",
+   "include": true,
+   "review": [
+    "MAIN MESSAGE_TAKEOUT: options 1-4 mapped by POSITION (1=main,2=sec1,3=sec2,4=buy/try) — confirm against the questionnaire"
+   ],
+   "value_slots": {
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "4": 5,
+    "5": null,
+    "6": null
+   },
+   "type": "single"
+  },
+  {
+   "key": "MAIN",
+   "vars": [
+    "MAINnone",
+    "MAINr1",
+    "MAINr2",
+    "MAINr3",
+    "MAINr4",
+    "MAINr5",
+    "MAINr6",
+    "MAINr7"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "MAIN",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "MAINnone": "None of These Classifications Apply",
+    "MAINr1": "האגיס",
+    "MAINr2": "טיטולים",
+    "MAINr3": "פמפרס",
+    "MAINr4": "בייביסיטר",
+    "MAINr5": "לייף בייביס",
+    "MAINr6": "שופרסל בייבי",
+    "MAINr7": "אין עיקרי"
+   }
+  },
+  {
+   "key": "PREF",
+   "vars": [
+    "PREF"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 52.7,
+   "question": "אם כל המותגים הבאים היו נמכרים באותו מחיר בחנות שבה את קונה את החיתולים החד פעמיים, איזה מהם היית מעדיפה לקנות?",
+   "include": true,
+   "review": [
+    "no dictionary variable — will be tabulated as analysis-only (no united code)"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7
+   },
+   "type": "single"
+  },
+  {
+   "key": "q9",
+   "vars": [
+    "q9"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 51.2,
+   "question": "איזה מותג חיתולים מהמותגים הבאים את קונה בעיקר?",
+   "include": true,
+   "review": [
+    "no dictionary variable — will be tabulated as analysis-only (no united code)"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7
+   },
+   "type": "single"
+  },
+  {
+   "key": "q30",
+   "vars": [
+    "q30"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 50.0,
+   "question": "ואיזה מוצר מהבאים את קונה בעיקר?",
+   "include": true,
+   "review": [
+    "no dictionary variable — will be tabulated as analysis-only (no united code)"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10
+   },
+   "type": "single"
+  },
+  {
+   "key": "q33",
+   "vars": [
+    "q33"
+   ],
+   "dict_var": "RECVD",
+   "confidence": "keyword",
+   "score": 0,
+   "question": "השאלות הבאות הן על הפרסומת שזה עתה ראית.אנא דמיין/י כאילו ראית את הפרסומת על מסך הטלוויזיה.האם יצא לך לראות פרסומת זו בחודש האחרון (הכוונ",
+   "include": true,
+   "review": [
+    "exposure channel -> RECVD: confirm which media channel this is"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q49",
+   "vars": [
+    "q49"
+   ],
+   "dict_var": "RECIMB",
+   "confidence": "keyword",
+   "score": 0,
+   "question": "האם במהלך התקופה האחרונה יצא לך לראות באינטרנט את הפרסומות שלפניך להאגיס?[ads.jpg]",
+   "include": true,
+   "review": [
+    "exposure channel -> RECIMB: confirm which media channel this is"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q50",
+   "vars": [
+    "q50"
+   ],
+   "dict_var": "RECINF",
+   "confidence": "keyword",
+   "score": 0,
+   "question": "כעת יוצגו לך פרסומות להאגיס שהופיעו בתקופה האחרונה ברשתות החברתיות בפייסבוק, אינסטגרם או טיק טוק.[reshatot.jpg]האם ראית בתקופה האחרונה לפחות א?",
+   "include": true,
+   "review": [
+    "exposure channel -> RECINF: confirm which media channel this is"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q53",
+   "vars": [
+    "q53"
+   ],
+   "dict_var": "REC_ACT",
+   "confidence": "keyword",
+   "score": 0,
+   "question": "האם יצא לך לראות בחודש האחרון פרסומים לפעילות של האגיס בתוכנית ישראל בידור?[53.jpg]האם ראית לפחות אחד מפרסומים אלו?",
+   "include": true,
+   "review": [
+    "exposure channel -> REC_ACT: confirm which media channel this is"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q54",
+   "vars": [
+    "q54"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 91.5,
+   "question": "עד כמה נהנית לצפות בתכנים אלו של המשפיענים?",
+   "include": true,
+   "review": [
+    "dictionary match is fuzzy — confirm",
+    "ENJOY already carried by block ENJOY — this block demoted to analysis-only (re-assign if it is the right one)"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "single"
+  },
+  {
+   "key": "q55",
+   "vars": [
+    "q55"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 65.9,
+   "question": "עד כמה תוכן המשפיענים שראית גורם לך לרצות לקנות חיתולי האגיס?",
+   "include": true,
+   "review": [
+    "dictionary match is fuzzy — confirm",
+    "DESIRABILITY already carried by block DESIRABILITY — this block demoted to analysis-only (re-assign if it is the right one)"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "single"
+  },
+  {
+   "key": "q56",
+   "vars": [
+    "q56"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0,
+   "question": "האם יצא לך לראות בחודש האחרון פרסומים לפעילות האגיס בתוכנית של גיא פינס?[56.jpg]",
+   "include": true,
+   "review": [
+    "exposure channel -> REC_ACT: confirm which media channel this is",
+    "REC_ACT already carried by block q53 — this block demoted to analysis-only (re-assign if it is the right one)"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q57",
+   "vars": [
+    "q57"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0,
+   "question": "האם יצא לך לראות בשבועות האחרונים פרסומים לאירוע ליקיז (LIKYS) של האגיס פריפיל, כדוגמת אלו המוצגים בפניך?[57.jpg]",
+   "include": true,
+   "review": [
+    "exposure channel -> REC_ACT: confirm which media channel this is",
+    "REC_ACT already carried by block q53 — this block demoted to analysis-only (re-assign if it is the right one)"
+   ],
+   "type": "single",
+   "note": "yes/no exposure question — used in exposure union",
+   "value_slots": {
+    "1": 1,
+    "2": 2
+   }
+  },
+  {
+   "key": "q28_29",
+   "vars": [
+    "q28_29none",
+    "q28_29r1",
+    "q28_29r2",
+    "q28_29r3",
+    "q28_29r4",
+    "q28_29r5",
+    "q28_29r6",
+    "q28_29r7",
+    "q28_29r8",
+    "q28_29r9"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "28+29",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q28_29none": "None of These Classifications Apply",
+    "q28_29r1": "Huggies Freedom Dry",
+    "q28_29r2": "Huggies Freedom Dry Pants",
+    "q28_29r3": "Huggies Extra Care",
+    "q28_29r4": "Pampers Baby dry",
+    "q28_29r5": "Pampers Pants",
+    "q28_29r6": "Pampers Premium care",
+    "q28_29r7": "Pampers Harmony",
+    "q28_29r8": "Huggies Overnights",
+    "q28_29r9": "האגיס פריפיל FREE FEEL[freefeel.jpg]"
+   }
+  },
+  {
+   "key": "q28",
+   "vars": [
+    "q28r1",
+    "q28r2",
+    "q28r3",
+    "q28r4",
+    "q28r5",
+    "q28r6"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 50.0,
+   "question": "האגיס פרידום דריי[huggiesFD.jpg] - ציינת שרכשת בשנה האחרונה חיתולים של האגיס.אילו מהמוצרים הבאים רכשת בשנה האחרונה?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q28r1": "Huggies Freedom Dry",
+    "q28r2": "Huggies Freedom Dry Pants",
+    "q28r3": "Huggies Extra Care",
+    "q28r4": "Huggies Overnights",
+    "q28r5": "האגיס פריפיל FREE FEEL[freefeel.jpg]",
+    "q28r6": "אף אחד מהם"
+   }
+  },
+  {
+   "key": "q29",
+   "vars": [
+    "q29r1",
+    "q29r2",
+    "q29r3",
+    "q29r4",
+    "q29r5"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 49.2,
+   "question": "פמפרס בייבי דריי[23b1.jpg] - ציינת שרכשת בשנה האחרונה חיתולים של פמפרס.אילו מהמוצרים הבאים רכשת בשנה האחרונה?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q29r1": "Pampers Baby dry",
+    "q29r2": "Pampers Pants",
+    "q29r3": "Pampers Premium care",
+    "q29r4": "Pampers Harmony",
+    "q29r5": "אף אחד מהם"
+   }
+  },
+  {
+   "key": "q30final",
+   "vars": [
+    "q30finalnone",
+    "q30finalr1",
+    "q30finalr2",
+    "q30finalr3",
+    "q30finalr4",
+    "q30finalr5",
+    "q30finalr6",
+    "q30finalr7",
+    "q30finalr8",
+    "q30finalr9",
+    "q30finalr10"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "30",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q30finalnone": "None of These Classifications Apply",
+    "q30finalr1": "Huggies Freedom Dry",
+    "q30finalr2": "Huggies Freedom Dry Pants",
+    "q30finalr3": "Huggies Extra Care",
+    "q30finalr4": "Pampers Baby dry",
+    "q30finalr5": "Pampers Pants",
+    "q30finalr6": "Pampers Premium care",
+    "q30finalr7": "Pampers Harmony",
+    "q30finalr8": "Huggies Overnights",
+    "q30finalr9": "האגיס פריפיל FREE FEEL[freefeel.jpg]",
+    "q30finalr10": "אין עיקרי"
+   }
+  },
+  {
+   "key": "q31",
+   "vars": [
+    "q31r1",
+    "q31r2",
+    "q31r3",
+    "q31r4",
+    "q31r5",
+    "q31r6",
+    "q31r8",
+    "q31r9"
+   ],
+   "dict_var": "SEMIAEX-CAT",
+   "confidence": "fuzzy-low",
+   "score": 76.3,
+   "question": "האם ראית או שמעת לאחרונה פרסומות לחיתולים? אם כן, לאיזה מותג או מותגים?",
+   "include": true,
+   "review": [
+    "SEMIAEX-CAT#01 = tested-brand row — confirm"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q31r1": "האגיס[logo_Huggies_wipes.jpg]",
+    "q31r2": "טיטולים[logo_titulim.jpg]",
+    "q31r3": "פמפרס[Pampers_logo.jpg]",
+    "q31r4": "בייביסיטר[Babysitter_logo.png]",
+    "q31r5": "לייף בייביס[Life_Babys_logo.jpg]",
+    "q31r6": "שופרסל בייבי[shufersal_baby_logo.png]",
+    "q31r8": "ראיתי או שמעתי פרסומת למותג חיתולים, לא זוכר/ת לאיזה מותג",
+    "q31r9": "לא ראיתי או שמעתי פרסומת למותג חיתולים"
+   },
+   "nets": {
+    "SEMIAEX-CAT#01": {
+     "include": [
+      "q31r1"
+     ],
+     "note": "המותג הנבדק בשאלת הקטגוריה"
+    }
+   },
+   "base": "all",
+   "confirmed": true
+  },
+  {
+   "key": "q45_47AD_RELEVANCE",
+   "vars": [
+    "q45_47AD_RELEVANCE"
+   ],
+   "dict_var": "AD_RELEVANCE",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "כשאת/ה חושב/ת על פרסומת זו להאגיס, צייני עד כמה את מסכימה או לא מסכימה עם כל אחד מהמשפטים ה?",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "q45_47BRAND_DIFFERENT",
+   "vars": [
+    "q45_47BRAND_DIFFERENT"
+   ],
+   "dict_var": "BRAND_DIFFERENT",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "כשאת/ה חושב/ת על פרסומת זו להאגיס, צייני עד כמה את מסכימה או לא מסכימה עם ?",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "q45_47MESSAGE_CREDIBILITY",
+   "vars": [
+    "q45_47MESSAGE_CREDIBILITY"
+   ],
+   "dict_var": "MESSAGE_CREDIBILITY",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "כשאת/ה חושב/ת על פרסומת זו להאגיס, צייני עד כמה את מסכימה או לא מסכימה עם כל אחד מהמשפטים הבאים.",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+   },
+   "type": "scale"
+  },
+  {
+   "key": "q51",
+   "vars": [
+    "q51r1",
+    "q51r2",
+    "q51r3",
+    "q51r4",
+    "q51r5",
+    "q51r6",
+    "q51r7",
+    "q51r8",
+    "q51r9",
+    "q51r10",
+    "q51r11",
+    "q51r12",
+    "q51r13",
+    "q51r14",
+    "q51r15",
+    "q51r16",
+    "q51r17",
+    "q51r18",
+    "q51r19",
+    "q51r20",
+    "q51r21",
+    "q51r22",
+    "q51r23",
+    "q51r24"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 58.8,
+   "question": "אחרי מי מהבאים את עוקבת באינסטגרם או בטיקטוק?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q51r1": "קורין גדעון[kg.jpg]",
+    "q51r2": "טליה עובדיה[to.jpg]",
+    "q51r3": "שובל ריזין[sr.jpg]",
+    "q51r4": "ירדן ויזל[yv.jpg]",
+    "q51r5": "ליקי רוזנברג מיכאלי[lr.jpg]",
+    "q51r6": "גל כהן[gk.jpg]",
+    "q51r7": "תאיר זיידמן[tz.jpg]",
+    "q51r8": "דורין דותן[dod.jpg]",
+    "q51r9": "אדווה כלפון[ak.jpg]",
+    "q51r10": "טל מור[tm.jpg]",
+    "q51r11": "בר כהן[bk.jpg]",
+    "q51r12": "דניאלה שרביט[ds.jpg]",
+    "q51r13": "רוני פרץ[rp.jpg]",
+    "q51r14": "דניאלה דואק[dad.jpg]",
+    "q51r15": "גילי הבר דויד (גיליגולי)[gh.jpg]",
+    "q51r16": "פופו נקטיב[pn.jpg]",
+    "q51r17": "נועם כהן[nk.jpg]",
+    "q51r18": "טליה וליאל[tandl.jpg]",
+    "q51r19": "בר זומר ואביב[banda.jpg]",
+    "q51r20": "בר ואליאב[bande.jpg]",
+    "q51r21": "ירדן ועמית[yanda.jpg]",
+    "q51r22": "אופיר ועמית[oanda.jpg]",
+    "q51r23": "לא עוקבת אחרי אף אחד מהם",
+    "q51r24": "אין לי פרופיל באינסטגרם ו/או טיקטוק"
+   }
+  },
+  {
+   "key": "q52",
+   "vars": [
+    "q52r1",
+    "q52r2",
+    "q52r3",
+    "q52r4",
+    "q52r5",
+    "q52r6",
+    "q52r7",
+    "q52r8",
+    "q52r9",
+    "q52r10",
+    "q52r11",
+    "q52r12",
+    "q52r13",
+    "q52r14",
+    "q52r15",
+    "q52r16",
+    "q52r17",
+    "q52r18",
+    "q52r19",
+    "q52r20",
+    "q52r21",
+    "q52r22",
+    "q52r23"
+   ],
+   "dict_var": "RECINF_BR",
+   "confidence": "keyword",
+   "score": 82.9,
+   "question": "האם נחשפת בשבועות האחרונים לפעילות של האגיס עם המשפיענים הבאים באינטרנט?סמני רק את המשפיענים אצלהם נחשפת לפעילות של",
+   "include": true,
+   "review": [],
+   "type": "multi",
+   "option_names": {
+    "q52r1": "קורין גדעון[kg2.jpg]",
+    "q52r2": "טליה עובדיה[to2.jpg]",
+    "q52r3": "שובל ריזין[sr2.jpg]",
+    "q52r4": "ירדן ויזל[yv2.jpg]",
+    "q52r5": "ליקי רוזנברג מיכאלי[lr2.jpg]",
+    "q52r6": "גל כהן [gk2.jpg]",
+    "q52r7": "תאיר זיידמן[tz2.jpg]",
+    "q52r8": "דורין דותן [dod2.jpg]",
+    "q52r9": "אדווה כלפון [ak2.jpg]",
+    "q52r10": "טל מור[tm2.jpg]",
+    "q52r11": "בר כהן[bk2.jpg]",
+    "q52r12": "דניאלה שרביט[ds2.jpg]",
+    "q52r13": "רוני פרץ[rp2.jpg]",
+    "q52r14": "דניאלה דואק[dad2.jpg]",
+    "q52r15": "גילי הבר דויד (גיליגולי)[gh2.jpg]",
+    "q52r16": "פופו נקטיב[pn2.jpg]",
+    "q52r17": "נועם כהן[nk2.jpg]",
+    "q52r18": "טליה וליאל[tandl2.jpg]",
+    "q52r19": "בר זומר ואביב[banda2.jpg]",
+    "q52r20": "בר ואליאב[bande2.jpg]",
+    "q52r21": "ירדן ועמית[yanda2.jpg]",
+    "q52r22": "אופיר ועמית[oanda2.jpg]",
+    "q52r23": "לא ראיתי אף אחד מהם"
+   },
+   "note": "exposure grid — used in exposure union (options except 'none')"
+  },
+  {
+   "key": "q6",
+   "vars": [
+    "q6r1",
+    "q6r2",
+    "q6r3",
+    "q6r4",
+    "q6r5",
+    "q6r6",
+    "q6r7"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 60.5,
+   "question": "האם את מכירה או שמעת על המותגים הבאים?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "q6r1": "האגיס[huggies.jpg]",
+    "q6r2": "טיטולים[titulim.jpg]",
+    "q6r3": "פמפרס[pampers.jpg]",
+    "q6r4": "בייביסיטר[babysitter.jpg]",
+    "q6r5": "לייף בייביס[life.jpg]",
+    "q6r6": "שופרסל בייבי[shufersal.jpg]",
+    "q6r7": "לא שמעתי על אף אחד מהם"
+   }
+  },
+  {
+   "key": "REPEAT",
+   "vars": [
+    "REPEAT"
+   ],
+   "dict_var": "REPEAT",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "האם זוהי פרסומת שבעתיד:",
+   "include": true,
+   "review": [],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3
+   },
+   "type": "scale"
+  },
+  {
+   "key": "seen",
+   "vars": [
+    "seen"
+   ],
+   "dict_var": null,
+   "confidence": "fuzzy-low",
+   "score": 65.4,
+   "question": "האם ראית עכשיו את הפרסומת?",
+   "include": true,
+   "review": [
+    "dictionary match is fuzzy — confirm"
+   ],
+   "value_slots": {
+    "1": 1,
+    "2": 2,
+    "3": 3
+   },
+   "type": "single"
+  },
+  {
+   "key": "TOTAL_MESSAGE_TAKEOUT",
+   "vars": [
+    "TOTAL_MESSAGE_TAKEOUTr1",
+    "TOTAL_MESSAGE_TAKEOUTr2",
+    "TOTAL_MESSAGE_TAKEOUTr3",
+    "TOTAL_MESSAGE_TAKEOUTr4",
+    "TOTAL_MESSAGE_TAKEOUTr5",
+    "TOTAL_MESSAGE_TAKEOUTr6"
+   ],
+   "dict_var": "Total MESSAGE_TAKEOUT",
+   "confidence": "exact",
+   "score": 100.0,
+   "question": "החיתול הכי טוב של המותג - [pipe: TOTAL_MESSAGEtxt]",
+   "include": true,
+   "review": [
+    "map options to main/secondary1/secondary2/buy from the QUESTIONNAIRE answer list (default = position order)"
+   ],
+   "type": "message_takeout",
+   "option_names": {
+    "TOTAL_MESSAGE_TAKEOUTr1": "האגיס FREE FEEL (פרי פיל) החיתול החדש של האגיס",
+    "TOTAL_MESSAGE_TAKEOUTr2": "האגיס FREE FEEL (פרי פיל) חיתול רך כמשי, דק פי 2",
+    "TOTAL_MESSAGE_TAKEOUTr3": "האגיס FREE FEEL (פרי פיל) חיתול בטכנולוגיית Thin Tech Core לספיגה עד 12 שעות",
+    "TOTAL_MESSAGE_TAKEOUTr4": "שכדאי לקנות/ לנסות את האגיס",
+    "TOTAL_MESSAGE_TAKEOUTr5": "אף אחד מהם",
+    "TOTAL_MESSAGE_TAKEOUTr6": "לא יודע/ת"
+   },
+   "option_slots": {
+    "TOTAL_MESSAGE_TAKEOUTr1": 1,
+    "TOTAL_MESSAGE_TAKEOUTr2": 2,
+    "TOTAL_MESSAGE_TAKEOUTr3": 3,
+    "TOTAL_MESSAGE_TAKEOUTr4": 4
+   },
+   "main_var": "MAIN_MESSAGE_TAKEOUT",
+   "main_positions": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4
+   }
+  },
+  {
+   "key": "TOTAL_MESSAGEtxt",
+   "vars": [
+    "TOTAL_MESSAGEtxtnone",
+    "TOTAL_MESSAGEtxtr1",
+    "TOTAL_MESSAGEtxtr2"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "43",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "TOTAL_MESSAGEtxtnone": "None of These Classifications Apply",
+    "TOTAL_MESSAGEtxtr1": "איזה דברים נוספים הפרסומת אמרה לך לגבי האגיס?",
+    "TOTAL_MESSAGEtxtr2": "איזה דברים הפרסומת אמרה לך לגבי האגיס?"
+   }
+  },
+  {
+   "key": "USAGELASTYEAR",
+   "vars": [
+    "USAGELASTYEARr1",
+    "USAGELASTYEARr2",
+    "USAGELASTYEARr3",
+    "USAGELASTYEARr4",
+    "USAGELASTYEARr5",
+    "USAGELASTYEARr6",
+    "USAGELASTYEARr7"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 57.9,
+   "question": "איזה מהמותגים הבאים קנית בשנה האחרונה?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "USAGELASTYEARr1": "האגיס[huggies.jpg]",
+    "USAGELASTYEARr2": "טיטולים[titulim.jpg]",
+    "USAGELASTYEARr3": "פמפרס[pampers.jpg]",
+    "USAGELASTYEARr4": "בייביסיטר[babysitter.jpg]",
+    "USAGELASTYEARr5": "לייף בייביס[life.jpg]",
+    "USAGELASTYEARr6": "שופרסל בייבי[shufersal.jpg]",
+    "USAGELASTYEARr7": "אחר"
+   }
+  },
+  {
+   "key": "USAGE",
+   "vars": [
+    "USAGEr1",
+    "USAGEr2",
+    "USAGEr3",
+    "USAGEr4",
+    "USAGEr5",
+    "USAGEr6",
+    "USAGEr7"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 52.7,
+   "question": "איזה ממותגי החיתולים הבאים קנית בשלושת החודשים האחרונים?",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "USAGEr1": "האגיס[huggies.jpg]",
+    "USAGEr2": "טיטולים[titulim.jpg]",
+    "USAGEr3": "פמפרס[pampers.jpg]",
+    "USAGEr4": "בייביסיטר[babysitter.jpg]",
+    "USAGEr5": "לייף בייביס[life.jpg]",
+    "USAGEr6": "שופרסל בייבי[shufersal.jpg]",
+    "USAGEr7": "אחר"
+   }
+  },
+  {
+   "key": "vctq1",
+   "vars": [
+    "vctq1c1",
+    "vctq1c2",
+    "vctq1c3",
+    "vctq1c4"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "חשיפה לכלל הקמפיי",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "vctq1c1": "חשיפה לפחות פעם אחת",
+    "vctq1c2": "לא נחשפו בכלל",
+    "vctq1c3": "חשיפה לפעילות משפיענים",
+    "vctq1c4": "לא נחשפו"
+   }
+  },
+  {
+   "key": "vctq2",
+   "vars": [
+    "vctq2c1",
+    "vctq2c2",
+    "vctq2c3",
+    "vctq2c4",
+    "vctq2c5"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "סרטון ראש",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "vctq2c1": "נחשפו להכל",
+    "vctq2c2": "חשיפה לסרטון ודיגיטל",
+    "vctq2c3": "חשיפה סרטון ראשי בלבד",
+    "vctq2c4": "חשיפה לדיגיטל ללא סרטון ראשי",
+    "vctq2c5": "לא נחשפו בכלל"
+   }
+  },
+  {
+   "key": "vctq3",
+   "vars": [
+    "vctq3c1",
+    "vctq3c2",
+    "vctq3c3",
+    "vctq3c4",
+    "vctq3c5",
+    "vctq3c6",
+    "vctq3c7",
+    "vctq3c8"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "חשיפ",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "multi",
+   "option_names": {
+    "vctq3c1": "חשיפה לסרטון בלבד",
+    "vctq3c2": "משפיענים בלבד",
+    "vctq3c3": "חשיפה דיגיטל בלבד",
+    "vctq3c4": "חשיפה לסרטון ומשפיענים",
+    "vctq3c5": "חשיפה לסרטון ודיגיטל",
+    "vctq3c6": "חשיפה משפיענים ודיגיטל",
+    "vctq3c7": "נחשפו לכולם",
+    "vctq3c8": "לא נחשפו בכלל"
+   }
+  },
+  {
+   "key": "vq32_coded",
+   "vars": [
+    "vq32_codedr1",
+    "vq32_codedr2",
+    "vq32_codedr3",
+    "vq32_codedr4",
+    "vq32_codedr5",
+    "vq32_codedr6",
+    "vq32_codedr7",
+    "vq32_codedr8",
+    "vq32_codedr9",
+    "vq32_codedr10",
+    "vq32_codedr11",
+    "vq32_codedr12",
+    "vq32_codedr13",
+    "vq32_codedr14",
+    "vq32_codedr15",
+    "vq32_codedr16",
+    "vq32_codedr17",
+    "vq32_codedr18",
+    "vq32_codedr19",
+    "vq32_codedr99"
+   ],
+   "dict_var": "SEMIAEX-VD",
+   "confidence": "alias",
+   "score": 64.3,
+   "question": "מה זכור לך מהפרסומות של של האגיס? מה הוצג בהן? מה נאמר בהן?",
+   "include": true,
+   "review": [
+    "net #01 = any substantive code — confirm the excluded (non-substantive) codes",
+    "SEMIAEX-VD_gross/_NET/_PRS/_LNG/_MSG/_BRD need code roles (proof of exposure) — ask the researcher / codebook, then add to `nets`"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq32_codedr1": "לא זוכר",
+    "vq32_codedr2": "תינוקות (ללא פירוט)",
+    "vq32_codedr3": "חיתולי Free Feel",
+    "vq32_codedr4": "חיתולים חדשים/ סוג חדש",
+    "vq32_codedr5": "חיתולים איכותיים",
+    "vq32_codedr6": "הכי טוב",
+    "vq32_codedr7": "טכנולוגיה חדשה",
+    "vq32_codedr8": "נוחות החיתולים",
+    "vq32_codedr9": "סופג טוב יותר",
+    "vq32_codedr10": "העור יבש אחרי לילה שלם",
+    "vq32_codedr11": "טוב לעור התינוק",
+    "vq32_codedr12": "חיתולים רכים",
+    "vq32_codedr13": "חיתולים דקים/ דק",
+    "vq32_codedr14": "הקריינות של איל קיציס",
+    "vq32_codedr15": "תינוק ישן",
+    "vq32_codedr16": "תינוק שמח",
+    "vq32_codedr17": "הורים",
+    "vq32_codedr18": "מבצע",
+    "vq32_codedr19": "פרסום ברשתות החברתיות/ פרסום של משפיענים",
+    "vq32_codedr99": "אחר"
+   },
+   "nets": {
+    "SEMIAEX-VD#01": {
+     "exclude": [
+      "vq32_codedr1"
+     ]
+    }
+   },
+   "base": "all"
+  },
+  {
+   "key": "vq36_coded",
+   "vars": [
+    "vq36_codedr1",
+    "vq36_codedr2",
+    "vq36_codedr3",
+    "vq36_codedr4",
+    "vq36_codedr5",
+    "vq36_codedr6",
+    "vq36_codedr7",
+    "vq36_codedr8",
+    "vq36_codedr9",
+    "vq36_codedr10",
+    "vq36_codedr11",
+    "vq36_codedr12",
+    "vq36_codedr13",
+    "vq36_codedr14",
+    "vq36_codedr15",
+    "vq36_codedr16",
+    "vq36_codedr17",
+    "vq36_codedr18",
+    "vq36_codedr19",
+    "vq36_codedr20",
+    "vq36_codedr21",
+    "vq36_codedr22",
+    "vq36_codedr23",
+    "vq36_codedr24",
+    "vq36_codedr25",
+    "vq36_codedr26",
+    "vq36_codedr99"
+   ],
+   "dict_var": "LIKES",
+   "confidence": "keyword",
+   "score": 90.0,
+   "question": "מה מצא חן בעיניך בפרסומת?",
+   "include": true,
+   "review": [
+    "net #01 = any substantive code — confirm the excluded (non-substantive) codes"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq36_codedr1": "לא יודע",
+    "vq36_codedr2": "אהבתי הכל",
+    "vq36_codedr3": "הומור",
+    "vq36_codedr4": "השחקנים",
+    "vq36_codedr5": "תינוקות חמודים",
+    "vq36_codedr6": "פרסומת יפה",
+    "vq36_codedr7": "עיצוב גרפי",
+    "vq36_codedr8": "צבעוניות",
+    "vq36_codedr9": "עריכה",
+    "vq36_codedr10": "צילום",
+    "vq36_codedr11": "תסריט",
+    "vq36_codedr12": "פסקול",
+    "vq36_codedr13": "קריינות",
+    "vq36_codedr14": "הדיבור העממי",
+    "vq36_codedr15": "תוכן מעניין",
+    "vq36_codedr16": "מסר ברור",
+    "vq36_codedr17": "קצרה",
+    "vq36_codedr18": "מקורית",
+    "vq36_codedr19": "קלילות",
+    "vq36_codedr20": "מסקרן/ משכנע",
+    "vq36_codedr21": "הרעיון של המוצר",
+    "vq36_codedr22": "רכות",
+    "vq36_codedr23": "אווירה כייפית",
+    "vq36_codedr24": "תחושת הזדהות",
+    "vq36_codedr25": "העברת תחושת הנוחות",
+    "vq36_codedr26": "פרפרים",
+    "vq36_codedr99": "אחר"
+   },
+   "nets": {
+    "LIKES#01": {
+     "exclude": [
+      "vq36_codedr1"
+     ]
+    }
+   }
+  },
+  {
+   "key": "vq37_coded",
+   "vars": [
+    "vq37_codedr1",
+    "vq37_codedr2",
+    "vq37_codedr3",
+    "vq37_codedr4",
+    "vq37_codedr5",
+    "vq37_codedr6",
+    "vq37_codedr7",
+    "vq37_codedr8",
+    "vq37_codedr9",
+    "vq37_codedr10",
+    "vq37_codedr11",
+    "vq37_codedr12",
+    "vq37_codedr13",
+    "vq37_codedr14",
+    "vq37_codedr15",
+    "vq37_codedr16",
+    "vq37_codedr17",
+    "vq37_codedr18",
+    "vq37_codedr99"
+   ],
+   "dict_var": "DISLIKES",
+   "confidence": "keyword",
+   "score": 90.0,
+   "question": "מה לא מצא חן בעיניך בפרסומת?",
+   "include": true,
+   "review": [
+    "net #01 = any substantive code — confirm the excluded (non-substantive) codes"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq37_codedr1": "לא יודע",
+    "vq37_codedr2": "אהבתי הכל",
+    "vq37_codedr3": "לא אהבתי כלום",
+    "vq37_codedr4": "ארוכה מדי",
+    "vq37_codedr5": "קצרה מדי",
+    "vq37_codedr6": "משעממת",
+    "vq37_codedr7": "לא מקורית",
+    "vq37_codedr8": "ההומור",
+    "vq37_codedr9": "חופרת",
+    "vq37_codedr10": "סתמית",
+    "vq37_codedr11": "לא אמינה",
+    "vq37_codedr12": "מסר לא ברור",
+    "vq37_codedr13": "קריינות",
+    "vq37_codedr14": "התינוקות",
+    "vq37_codedr15": "הצגת ההורים כמיואשים",
+    "vq37_codedr16": "עניין ה-\"ה\"",
+    "vq37_codedr17": "מיותר לפרסם חיתולים",
+    "vq37_codedr18": "שימוש בבינה מלאכותית",
+    "vq37_codedr99": "אחר"
+   },
+   "nets": {
+    "DISLIKES#01": {
+     "exclude": [
+      "vq37_codedr1",
+      "vq37_codedr2",
+      "vq37_codedr3"
+     ]
+    }
+   }
+  },
+  {
+   "key": "vq4a_coded",
+   "vars": [
+    "vq4a_codedr1",
+    "vq4a_codedr2",
+    "vq4a_codedr3",
+    "vq4a_codedr4",
+    "vq4a_codedr5",
+    "vq4a_codedr6",
+    "vq4a_codedr7",
+    "vq4a_codedr8",
+    "vq4a_codedr9",
+    "vq4a_codedr10",
+    "vq4a_codedr11",
+    "vq4a_codedr99"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 55.0,
+   "question": "צייני שמות של מותגי חיתולים חד פעמיים שאת מכירה, ראית או ששמעת עליהם.רשמי את השם הראשון שעולה בראשך בתיבה הראשונה.",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq4a_codedr1": "לא מכיר",
+    "vq4a_codedr2": "האגיס",
+    "vq4a_codedr3": "פאמפרס",
+    "vq4a_codedr4": "טיטולים",
+    "vq4a_codedr5": "בייביסיטר",
+    "vq4a_codedr6": "לייף",
+    "vq4a_codedr7": "שופרסל",
+    "vq4a_codedr8": "רמי לוי",
+    "vq4a_codedr9": "יש",
+    "vq4a_codedr10": "מונדודו",
+    "vq4a_codedr11": "במבינו",
+    "vq4a_codedr99": "אחר"
+   },
+   "nets": {}
+  },
+  {
+   "key": "vq4b_coded",
+   "vars": [
+    "vq4b_codedr1",
+    "vq4b_codedr2",
+    "vq4b_codedr3",
+    "vq4b_codedr4",
+    "vq4b_codedr5",
+    "vq4b_codedr6",
+    "vq4b_codedr7",
+    "vq4b_codedr8",
+    "vq4b_codedr9",
+    "vq4b_codedr10",
+    "vq4b_codedr11",
+    "vq4b_codedr99"
+   ],
+   "dict_var": null,
+   "confidence": "none",
+   "score": 0.0,
+   "question": "סה\"כ אזכורי",
+   "include": true,
+   "review": [
+    "no dictionary variable — analysis-only table"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq4b_codedr1": "לא מכיר",
+    "vq4b_codedr2": "האגיס",
+    "vq4b_codedr3": "פאמפרס",
+    "vq4b_codedr4": "טיטולים",
+    "vq4b_codedr5": "בייביסיטר",
+    "vq4b_codedr6": "לייף",
+    "vq4b_codedr7": "שופרסל",
+    "vq4b_codedr8": "רמי לוי",
+    "vq4b_codedr9": "יש",
+    "vq4b_codedr10": "מונדודו",
+    "vq4b_codedr11": "במבינו",
+    "vq4b_codedr99": "אחר"
+   },
+   "nets": {}
+  },
+  {
+   "key": "vq5_coded",
+   "vars": [
+    "vq5_codedr1",
+    "vq5_codedr2",
+    "vq5_codedr3",
+    "vq5_codedr4",
+    "vq5_codedr5",
+    "vq5_codedr6",
+    "vq5_codedr7",
+    "vq5_codedr99"
+   ],
+   "dict_var": "UNEXPOSEB",
+   "confidence": "alias",
+   "score": 68.8,
+   "question": "האם ראית לאחרונה פרסומות לחיתולים חד פעמיים? אם כן לאיזה מותגים?",
+   "include": true,
+   "review": [
+    "UNEXPOSEB#01 = tested brand in the TOTAL-mentions table — confirm the brand code"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vq5_codedr1": "לא ראיתי",
+    "vq5_codedr2": "ראיתי ולא זוכר שמות",
+    "vq5_codedr3": "האגיס",
+    "vq5_codedr4": "פאמפארס",
+    "vq5_codedr5": "טיטולים",
+    "vq5_codedr6": "לייף",
+    "vq5_codedr7": "בייביסיטר",
+    "vq5_codedr99": "אחר"
+   },
+   "nets": {
+    "UNEXPOSEB#01": {
+     "include": [
+      "vq5_codedr3"
+     ],
+     "note": "המותג הנבדק בטבלת סה\"כ אזכורים"
+    }
+   },
+   "base": "all"
+  },
+  {
+   "key": "vSLOGAN_coded",
+   "vars": [
+    "vSLOGAN_codedr1",
+    "vSLOGAN_codedr2",
+    "vSLOGAN_codedr3",
+    "vSLOGAN_codedr4",
+    "vSLOGAN_codedr5",
+    "vSLOGAN_codedr6",
+    "vSLOGAN_codedr7",
+    "vSLOGAN_codedr8",
+    "vSLOGAN_codedr9",
+    "vSLOGAN_codedr10",
+    "vSLOGAN_codedr11",
+    "vSLOGAN_codedr12",
+    "vSLOGAN_codedr13",
+    "vSLOGAN_codedr14",
+    "vSLOGAN_codedr15",
+    "vSLOGAN_codedr16",
+    "vSLOGAN_codedr17",
+    "vSLOGAN_codedr18",
+    "vSLOGAN_codedr99"
+   ],
+   "dict_var": "SLOGAN",
+   "confidence": "alias",
+   "score": 94.6,
+   "question": "רשמי בבקשה כל סיסמה שזכורה לך מהפרסומת.",
+   "include": true,
+   "review": [
+    "SLOGAN#01 = the CORRECT slogan code(s): choose them from the code list and add `nets: {\"SLOGAN#01\": {\"include\": [codeVar,...]}}` (do NOT use 'any code')"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vSLOGAN_codedr1": "לא יודע",
+    "vSLOGAN_codedr2": "We got you, baby",
+    "vSLOGAN_codedr3": "תקופת ה-\"ה\"",
+    "vSLOGAN_codedr4": "היי בייבי",
+    "vSLOGAN_codedr5": "ספיגה עד 12 שעות",
+    "vSLOGAN_codedr6": "Free Feel",
+    "vSLOGAN_codedr7": "חופשי להרגיש את העולם",
+    "vSLOGAN_codedr8": "טכנולוגיית ThinTech Core",
+    "vSLOGAN_codedr9": "במיוחד בשבילך",
+    "vSLOGAN_codedr10": "רך כמשי",
+    "vSLOGAN_codedr11": "דק פי 2",
+    "vSLOGAN_codedr12": "חיתולים דקים",
+    "vSLOGAN_codedr13": "חיתול נוח",
+    "vSLOGAN_codedr14": "חיתול סופג",
+    "vSLOGAN_codedr15": "מוצר חדש",
+    "vSLOGAN_codedr16": "המותג המוביל בישראל",
+    "vSLOGAN_codedr17": "האגיס (כללי)",
+    "vSLOGAN_codedr18": "הורים ותינוק",
+    "vSLOGAN_codedr99": "אחר"
+   },
+   "nets": {
+    "SLOGAN#01": {
+     "include": [
+      "vSLOGAN_codedr2"
+     ],
+     "note": "קוד סיסמה נכונה: We got you, baby (לאישור החוקר)"
+    }
+   },
+   "base": "all"
+  },
+  {
+   "key": "vSPONTIMPRESSION_coded",
+   "vars": [
+    "vSPONTIMPRESSION_codedr1",
+    "vSPONTIMPRESSION_codedr2",
+    "vSPONTIMPRESSION_codedr3",
+    "vSPONTIMPRESSION_codedr4",
+    "vSPONTIMPRESSION_codedr5",
+    "vSPONTIMPRESSION_codedr6",
+    "vSPONTIMPRESSION_codedr7",
+    "vSPONTIMPRESSION_codedr8",
+    "vSPONTIMPRESSION_codedr9",
+    "vSPONTIMPRESSION_codedr10",
+    "vSPONTIMPRESSION_codedr11",
+    "vSPONTIMPRESSION_codedr12",
+    "vSPONTIMPRESSION_codedr13",
+    "vSPONTIMPRESSION_codedr14",
+    "vSPONTIMPRESSION_codedr15",
+    "vSPONTIMPRESSION_codedr16",
+    "vSPONTIMPRESSION_codedr17",
+    "vSPONTIMPRESSION_codedr18",
+    "vSPONTIMPRESSION_codedr19",
+    "vSPONTIMPRESSION_codedr20",
+    "vSPONTIMPRESSION_codedr21",
+    "vSPONTIMPRESSION_codedr22",
+    "vSPONTIMPRESSION_codedr23",
+    "vSPONTIMPRESSION_codedr99"
+   ],
+   "dict_var": "SPONTIMPRESSION",
+   "confidence": "alias",
+   "score": 91.6,
+   "question": "מה לדעתך רצו להגיד בפרסומת לגבי האגיס? מהם המסרים שניסו להעביר באמצעותה לגבי המותג?",
+   "include": true,
+   "review": [
+    "net #01 = any substantive code — confirm the excluded (non-substantive) codes",
+    "SPONTIMP_CORRECT/_MAIN/_SEC/SPONTIMPRESS_BRD need the correct / main / secondary message codes from the brief+codebook — add to `nets`"
+   ],
+   "type": "coded_open",
+   "code_names": {
+    "vSPONTIMPRESSION_codedr1": "לא יודע",
+    "vSPONTIMPRESSION_codedr2": "שיווק למוצר",
+    "vSPONTIMPRESSION_codedr3": "חיתול חדש",
+    "vSPONTIMPRESSION_codedr4": "חיתולים איכותיים",
+    "vSPONTIMPRESSION_codedr5": "מתאים לעור התינוק",
+    "vSPONTIMPRESSION_codedr6": "מתאים לשעות הלילה",
+    "vSPONTIMPRESSION_codedr7": "אפשר לסמוך על החיתולים שלהם",
+    "vSPONTIMPRESSION_codedr8": "הכי טוב לבייבי שלך",
+    "vSPONTIMPRESSION_codedr9": "חיתול דק",
+    "vSPONTIMPRESSION_codedr10": "נוחות בתנועה",
+    "vSPONTIMPRESSION_codedr11": "יעילות החיתול",
+    "vSPONTIMPRESSION_codedr12": "רכות החיתול",
+    "vSPONTIMPRESSION_codedr13": "ספיגה טובה",
+    "vSPONTIMPRESSION_codedr14": "מתאים לכל התינוקות",
+    "vSPONTIMPRESSION_codedr15": "מתאים לכל מצב",
+    "vSPONTIMPRESSION_codedr16": "החיתול עובר מסע",
+    "vSPONTIMPRESSION_codedr17": "דואגים מגיל אפס",
+    "vSPONTIMPRESSION_codedr18": "הזדהות עם ההורים",
+    "vSPONTIMPRESSION_codedr19": "אמינות",
+    "vSPONTIMPRESSION_codedr20": "מחיר טוב",
+    "vSPONTIMPRESSION_codedr21": "חברה טובה",
+    "vSPONTIMPRESSION_codedr22": "להצחיק",
+    "vSPONTIMPRESSION_codedr23": "חיתול עם טכנולוגיה חדשה",
+    "vSPONTIMPRESSION_codedr99": "אחר"
+   },
+   "nets": {
+    "SPONTIMPRESSION#01": {
+     "exclude": [
+      "vSPONTIMPRESSION_codedr1"
+     ]
+    }
+   },
+   "base": "all"
+  }
+ ],
+ "skipped": [
+  {
+   "block": "ad1play_count",
+   "vars": [
+    "ad1play_count"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "ad1time_elapsed",
+   "vars": [
+    "ad1time_elapsed"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "ad2play_count",
+   "vars": [
+    "ad2play_count"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "ad2time_elapsed",
+   "vars": [
+    "ad2time_elapsed"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Age",
+   "vars": [
+    "Age"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "AgeGroups",
+   "vars": [
+    "AgeGroupsnone",
+    "AgeGroupsr1",
+    "AgeGroupsr2",
+    "AgeGroupsr3"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "Area",
+   "vars": [
+    "Area"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "City",
+   "vars": [
+    "City"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "date",
+   "vars": [
+    "date"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "dcua",
+   "vars": [
+    "dcua"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "decLang",
+   "vars": [
+    "decLang"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Education",
+   "vars": [
+    "Education"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "EndComment",
+   "vars": [
+    "EndComment"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Family",
+   "vars": [
+    "Family"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "Gender",
+   "vars": [
+    "Gender"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "Income",
+   "vars": [
+    "Income"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "IncomeCombined",
+   "vars": [
+    "IncomeCombinedr1",
+    "IncomeCombinedr2",
+    "IncomeCombinedr3",
+    "IncomeCombinedr4",
+    "IncomeCombinedr5",
+    "IncomeCombinedr6"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "IncomeSingle",
+   "vars": [
+    "IncomeSingle"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "list",
+   "vars": [
+    "list"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "markers",
+   "vars": [
+    "markers"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "noanswerq32_",
+   "vars": [
+    "noanswerq32_r1"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "OPTIN",
+   "vars": [
+    "OPTIN"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Persons",
+   "vars": [
+    "Persons"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "Practice",
+   "vars": [
+    "Practice"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "q1",
+   "vars": [
+    "q1"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "q2",
+   "vars": [
+    "q2"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "q3",
+   "vars": [
+    "q3"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "q5",
+   "vars": [
+    "q5"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "q32",
+   "vars": [
+    "q32"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "q36",
+   "vars": [
+    "q36"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "q37",
+   "vars": [
+    "q37"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "q11_27",
+   "vars": [
+    "q11_27r10c1",
+    "q11_27r10c2",
+    "q11_27r10c3",
+    "q11_27r10c4",
+    "q11_27r10c5",
+    "q11_27r10c6",
+    "q11_27r10c7",
+    "q11_27r10c8",
+    "q11_27r11c1",
+    "q11_27r11c2",
+    "q11_27r11c3",
+    "q11_27r11c4",
+    "q11_27r11c5",
+    "q11_27r11c6",
+    "q11_27r11c7",
+    "q11_27r11c8",
+    "q11_27r12c1",
+    "q11_27r12c2",
+    "q11_27r12c3",
+    "q11_27r12c4",
+    "q11_27r12c5",
+    "q11_27r12c6",
+    "q11_27r12c7",
+    "q11_27r12c8",
+    "q11_27r13c1",
+    "q11_27r13c2",
+    "q11_27r13c3",
+    "q11_27r13c4",
+    "q11_27r13c5",
+    "q11_27r13c6",
+    "q11_27r13c7",
+    "q11_27r13c8",
+    "q11_27r14c1",
+    "q11_27r14c2",
+    "q11_27r14c3",
+    "q11_27r14c4",
+    "q11_27r14c5",
+    "q11_27r14c6",
+    "q11_27r14c7",
+    "q11_27r14c8",
+    "q11_27r15c1",
+    "q11_27r15c2",
+    "q11_27r15c3",
+    "q11_27r15c4",
+    "q11_27r15c5",
+    "q11_27r15c6",
+    "q11_27r15c7",
+    "q11_27r15c8",
+    "q11_27r16c1",
+    "q11_27r16c2",
+    "q11_27r16c3",
+    "q11_27r16c4",
+    "q11_27r16c5",
+    "q11_27r16c6",
+    "q11_27r16c7",
+    "q11_27r16c8",
+    "q11_27r17c1",
+    "q11_27r17c2",
+    "q11_27r17c3",
+    "q11_27r17c4",
+    "q11_27r17c5",
+    "q11_27r17c6",
+    "q11_27r17c7",
+    "q11_27r17c8",
+    "q11_27r1c1",
+    "q11_27r1c2",
+    "q11_27r1c3",
+    "q11_27r1c4",
+    "q11_27r1c5",
+    "q11_27r1c6",
+    "q11_27r1c7",
+    "q11_27r1c8",
+    "q11_27r2c1",
+    "q11_27r2c2",
+    "q11_27r2c3",
+    "q11_27r2c4",
+    "q11_27r2c5",
+    "q11_27r2c6",
+    "q11_27r2c7",
+    "q11_27r2c8",
+    "q11_27r3c1",
+    "q11_27r3c2",
+    "q11_27r3c3",
+    "q11_27r3c4",
+    "q11_27r3c5",
+    "q11_27r3c6",
+    "q11_27r3c7",
+    "q11_27r3c8",
+    "q11_27r4c1",
+    "q11_27r4c2",
+    "q11_27r4c3",
+    "q11_27r4c4",
+    "q11_27r4c5",
+    "q11_27r4c6",
+    "q11_27r4c7",
+    "q11_27r4c8",
+    "q11_27r5c1",
+    "q11_27r5c2",
+    "q11_27r5c3",
+    "q11_27r5c4",
+    "q11_27r5c5",
+    "q11_27r5c6",
+    "q11_27r5c7",
+    "q11_27r5c8",
+    "q11_27r6c1",
+    "q11_27r6c2",
+    "q11_27r6c3",
+    "q11_27r6c4",
+    "q11_27r6c5",
+    "q11_27r6c6",
+    "q11_27r6c7",
+    "q11_27r6c8",
+    "q11_27r7c1",
+    "q11_27r7c2",
+    "q11_27r7c3",
+    "q11_27r7c4",
+    "q11_27r7c5",
+    "q11_27r7c6",
+    "q11_27r7c7",
+    "q11_27r7c8",
+    "q11_27r8c1",
+    "q11_27r8c2",
+    "q11_27r8c3",
+    "q11_27r8c4",
+    "q11_27r8c5",
+    "q11_27r8c6",
+    "q11_27r8c7",
+    "q11_27r8c8",
+    "q11_27r9c1",
+    "q11_27r9c2",
+    "q11_27r9c3",
+    "q11_27r9c4",
+    "q11_27r9c5",
+    "q11_27r9c6",
+    "q11_27r9c7",
+    "q11_27r9c8"
+   ],
+   "reason": "brand-image grid (brand x statement) — not in the effectiveness dictionary; run separately if needed"
+  },
+  {
+   "block": "q4a",
+   "vars": [
+    "q4a"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "q4b",
+   "vars": [
+    "q4b"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "qtime",
+   "vars": [
+    "qtime"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "record",
+   "vars": [
+    "record"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Religion",
+   "vars": [
+    "Religion"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  },
+  {
+   "block": "session",
+   "vars": [
+    "session"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "SLOGAN",
+   "vars": [
+    "SLOGAN"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "source",
+   "vars": [
+    "source"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "SPONTIMPRESSION",
+   "vars": [
+    "SPONTIMPRESSION"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "start_date",
+   "vars": [
+    "start_date"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "status",
+   "vars": [
+    "status"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "Total",
+   "vars": [
+    "Totalnone",
+    "Totalr1"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "url",
+   "vars": [
+    "url"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "use",
+   "vars": [
+    "user1",
+    "user3",
+    "user6",
+    "user7",
+    "user9"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "userAgent",
+   "vars": [
+    "userAgent"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "uuid",
+   "vars": [
+    "uuid"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vbrowser",
+   "vars": [
+    "vbrowser"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vbrowserr15",
+   "vars": [
+    "vbrowserr15oe"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vdropout",
+   "vars": [
+    "vdropout"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vlist",
+   "vars": [
+    "vlist"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vmobiledevice",
+   "vars": [
+    "vmobiledevice"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vmobileos",
+   "vars": [
+    "vmobileos"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vos",
+   "vars": [
+    "vos"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vosr15",
+   "vars": [
+    "vosr15oe"
+   ],
+   "reason": "paradata"
+  },
+  {
+   "block": "vq32_coded_data",
+   "vars": [
+    "vq32_coded_datar1",
+    "vq32_coded_datar2",
+    "vq32_coded_datar3",
+    "vq32_coded_datar4",
+    "vq32_coded_datar5"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vq36_coded_data",
+   "vars": [
+    "vq36_coded_datar1",
+    "vq36_coded_datar2",
+    "vq36_coded_datar3",
+    "vq36_coded_datar4"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vq37_coded_data",
+   "vars": [
+    "vq37_coded_datar1",
+    "vq37_coded_datar2",
+    "vq37_coded_datar3"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vq4a_coded_data",
+   "vars": [
+    "vq4a_coded_datar1"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vq4b_coded_data",
+   "vars": [
+    "vq4b_coded_datar1",
+    "vq4b_coded_datar2",
+    "vq4b_coded_datar3",
+    "vq4b_coded_datar4",
+    "vq4b_coded_datar5",
+    "vq4b_coded_datar6",
+    "vq4b_coded_datar7",
+    "vq4b_coded_datar8",
+    "vq4b_coded_datar9",
+    "vq4b_coded_datar10"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vq5_coded_data",
+   "vars": [
+    "vq5_coded_datar1",
+    "vq5_coded_datar2",
+    "vq5_coded_datar3"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vSLOGAN_coded_data",
+   "vars": [
+    "vSLOGAN_coded_datar1",
+    "vSLOGAN_coded_datar2",
+    "vSLOGAN_coded_datar3",
+    "vSLOGAN_coded_datar4",
+    "vSLOGAN_coded_datar5"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "vSPONTIMPRESSION_coded_data",
+   "vars": [
+    "vSPONTIMPRESSION_coded_datar1",
+    "vSPONTIMPRESSION_coded_datar2",
+    "vSPONTIMPRESSION_coded_datar3",
+    "vSPONTIMPRESSION_coded_datar4",
+    "vSPONTIMPRESSION_coded_datar5",
+    "vSPONTIMPRESSION_coded_datar6"
+   ],
+   "reason": "raw verbatim / code-slot text"
+  },
+  {
+   "block": "Work",
+   "vars": [
+    "Workr1",
+    "Workr2",
+    "Workr3",
+    "Workr4",
+    "Workr5",
+    "Workr6",
+    "Workr7",
+    "Workr8",
+    "Workr9",
+    "Workr10",
+    "Workr11"
+   ],
+   "reason": "demographic — not an effectiveness question (v1)"
+  }
+ ]
+}

@@ -1,0 +1,27 @@
+# Container Station / QNAP.  Deploy:  docker-compose pull && docker-compose up -d
+services:
+  impact360-sav-runner:
+    image: ghcr.io/itayole/impact360-sav-runner:latest
+    container_name: impact360-sav-runner
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      # QNAP: point the left side at a shared-folder path, e.g. /share/Container/impact360/data
+      - ./data:/data
+    environment:
+      TZ: Asia/Jerusalem
+      MAX_UPLOAD_MB: "1024"
+      UPLOAD_RETENTION_DAYS: "14"       # SAV / questionnaire files are deleted after this many days
+      PROJECT_RETENTION_DAYS: "180"     # project state + output workbook (aggregates only)
+      WORKERS: "2"
+      # Optional Basic Auth (leave empty on the internal network, or put a reverse proxy in front):
+      BASIC_AUTH_USER: ""
+      BASIC_AUTH_PASS: ""
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/api/health',timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

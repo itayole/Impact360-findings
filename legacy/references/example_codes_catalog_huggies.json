@@ -1,0 +1,1782 @@
+{
+ "project": "15422 (ID 147851).sav",
+ "brand": "האגיס",
+ "blocks": [
+  {
+   "key": "MAIN",
+   "dict_var": null,
+   "question": "MAIN",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "MAINnone",
+     "label": "None of These Classifications Apply",
+     "n": 5
+    },
+    {
+     "var": "MAINr1",
+     "label": "האגיס",
+     "n": 173
+    },
+    {
+     "var": "MAINr2",
+     "label": "טיטולים",
+     "n": 48
+    },
+    {
+     "var": "MAINr3",
+     "label": "פמפרס",
+     "n": 78
+    },
+    {
+     "var": "MAINr4",
+     "label": "בייביסיטר",
+     "n": 49
+    },
+    {
+     "var": "MAINr5",
+     "label": "לייף בייביס",
+     "n": 23
+    },
+    {
+     "var": "MAINr6",
+     "label": "שופרסל בייבי",
+     "n": 0
+    },
+    {
+     "var": "MAINr7",
+     "label": "אין עיקרי",
+     "n": 30
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q28_29",
+   "dict_var": null,
+   "question": "28+29",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q28_29none",
+     "label": "None of These Classifications Apply",
+     "n": 63
+    },
+    {
+     "var": "q28_29r1",
+     "label": "Huggies Freedom Dry",
+     "n": 213
+    },
+    {
+     "var": "q28_29r2",
+     "label": "Huggies Freedom Dry Pants",
+     "n": 43
+    },
+    {
+     "var": "q28_29r3",
+     "label": "Huggies Extra Care",
+     "n": 171
+    },
+    {
+     "var": "q28_29r4",
+     "label": "Pampers Baby dry",
+     "n": 98
+    },
+    {
+     "var": "q28_29r5",
+     "label": "Pampers Pants",
+     "n": 36
+    },
+    {
+     "var": "q28_29r6",
+     "label": "Pampers Premium care",
+     "n": 123
+    },
+    {
+     "var": "q28_29r7",
+     "label": "Pampers Harmony",
+     "n": 65
+    },
+    {
+     "var": "q28_29r8",
+     "label": "Huggies Overnights",
+     "n": 55
+    },
+    {
+     "var": "q28_29r9",
+     "label": "האגיס פריפיל FREE FEEL[freefeel.jpg]",
+     "n": 33
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q28",
+   "dict_var": null,
+   "question": "האגיס פרידום דריי[huggiesFD.jpg] - ציינת שרכשת בשנה האחרונה חיתולים של האגיס.אילו מהמוצרים הבאים רכשת בשנה האחרונה?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q28r1",
+     "label": "Huggies Freedom Dry",
+     "n": 213
+    },
+    {
+     "var": "q28r2",
+     "label": "Huggies Freedom Dry Pants",
+     "n": 43
+    },
+    {
+     "var": "q28r3",
+     "label": "Huggies Extra Care",
+     "n": 171
+    },
+    {
+     "var": "q28r4",
+     "label": "Huggies Overnights",
+     "n": 55
+    },
+    {
+     "var": "q28r5",
+     "label": "האגיס פריפיל FREE FEEL[freefeel.jpg]",
+     "n": 33
+    },
+    {
+     "var": "q28r6",
+     "label": "אף אחד מהם",
+     "n": 1
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q29",
+   "dict_var": null,
+   "question": "פמפרס בייבי דריי[23b1.jpg] - ציינת שרכשת בשנה האחרונה חיתולים של פמפרס.אילו מהמוצרים הבאים רכשת בשנה האחרונה?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q29r1",
+     "label": "Pampers Baby dry",
+     "n": 98
+    },
+    {
+     "var": "q29r2",
+     "label": "Pampers Pants",
+     "n": 36
+    },
+    {
+     "var": "q29r3",
+     "label": "Pampers Premium care",
+     "n": 123
+    },
+    {
+     "var": "q29r4",
+     "label": "Pampers Harmony",
+     "n": 65
+    },
+    {
+     "var": "q29r5",
+     "label": "אף אחד מהם",
+     "n": 0
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q30final",
+   "dict_var": null,
+   "question": "30",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q30finalnone",
+     "label": "None of These Classifications Apply",
+     "n": 63
+    },
+    {
+     "var": "q30finalr1",
+     "label": "Huggies Freedom Dry",
+     "n": 134
+    },
+    {
+     "var": "q30finalr2",
+     "label": "Huggies Freedom Dry Pants",
+     "n": 7
+    },
+    {
+     "var": "q30finalr3",
+     "label": "Huggies Extra Care",
+     "n": 68
+    },
+    {
+     "var": "q30finalr4",
+     "label": "Pampers Baby dry",
+     "n": 26
+    },
+    {
+     "var": "q30finalr5",
+     "label": "Pampers Pants",
+     "n": 8
+    },
+    {
+     "var": "q30finalr6",
+     "label": "Pampers Premium care",
+     "n": 39
+    },
+    {
+     "var": "q30finalr7",
+     "label": "Pampers Harmony",
+     "n": 16
+    },
+    {
+     "var": "q30finalr8",
+     "label": "Huggies Overnights",
+     "n": 7
+    },
+    {
+     "var": "q30finalr9",
+     "label": "האגיס פריפיל FREE FEEL[freefeel.jpg]",
+     "n": 4
+    },
+    {
+     "var": "q30finalr10",
+     "label": "אין עיקרי",
+     "n": 34
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q31",
+   "dict_var": "SEMIAEX-CAT",
+   "question": "האם ראית או שמעת לאחרונה פרסומות לחיתולים? אם כן, לאיזה מותג או מותגים?",
+   "type": "multi",
+   "base": "all",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q31r1",
+     "label": "האגיס[logo_Huggies_wipes.jpg]",
+     "n": 152
+    },
+    {
+     "var": "q31r2",
+     "label": "טיטולים[logo_titulim.jpg]",
+     "n": 7
+    },
+    {
+     "var": "q31r3",
+     "label": "פמפרס[Pampers_logo.jpg]",
+     "n": 72
+    },
+    {
+     "var": "q31r4",
+     "label": "בייביסיטר[Babysitter_logo.png]",
+     "n": 16
+    },
+    {
+     "var": "q31r5",
+     "label": "לייף בייביס[Life_Babys_logo.jpg]",
+     "n": 20
+    },
+    {
+     "var": "q31r6",
+     "label": "שופרסל בייבי[shufersal_baby_logo.png]",
+     "n": 0
+    },
+    {
+     "var": "q31r8",
+     "label": "ראיתי או שמעתי פרסומת למותג חיתולים, לא זוכר/ת לאיזה מותג",
+     "n": 42
+    },
+    {
+     "var": "q31r9",
+     "label": "לא ראיתי או שמעתי פרסומת למותג חיתולים",
+     "n": 173
+    }
+   ],
+   "wanted": [
+    {
+     "united": "SEMIAEX-CAT#01",
+     "label": "ציינו את שם המותג בשאלה (נעזר)"
+    }
+   ],
+   "current": {
+    "SEMIAEX-CAT#01": {
+     "include": [
+      "q31r1"
+     ],
+     "note": "המותג הנבדק בשאלת הקטגוריה"
+    }
+   }
+  },
+  {
+   "key": "q51",
+   "dict_var": null,
+   "question": "אחרי מי מהבאים את עוקבת באינסטגרם או בטיקטוק?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q51r1",
+     "label": "קורין גדעון[kg.jpg]",
+     "n": 78
+    },
+    {
+     "var": "q51r2",
+     "label": "טליה עובדיה[to.jpg]",
+     "n": 72
+    },
+    {
+     "var": "q51r3",
+     "label": "שובל ריזין[sr.jpg]",
+     "n": 10
+    },
+    {
+     "var": "q51r4",
+     "label": "ירדן ויזל[yv.jpg]",
+     "n": 48
+    },
+    {
+     "var": "q51r5",
+     "label": "ליקי רוזנברג מיכאלי[lr.jpg]",
+     "n": 23
+    },
+    {
+     "var": "q51r6",
+     "label": "גל כהן[gk.jpg]",
+     "n": 12
+    },
+    {
+     "var": "q51r7",
+     "label": "תאיר זיידמן[tz.jpg]",
+     "n": 1
+    },
+    {
+     "var": "q51r8",
+     "label": "דורין דותן[dod.jpg]",
+     "n": 23
+    },
+    {
+     "var": "q51r9",
+     "label": "אדווה כלפון[ak.jpg]",
+     "n": 8
+    },
+    {
+     "var": "q51r10",
+     "label": "טל מור[tm.jpg]",
+     "n": 4
+    },
+    {
+     "var": "q51r11",
+     "label": "בר כהן[bk.jpg]",
+     "n": 36
+    },
+    {
+     "var": "q51r12",
+     "label": "דניאלה שרביט[ds.jpg]",
+     "n": 19
+    },
+    {
+     "var": "q51r13",
+     "label": "רוני פרץ[rp.jpg]",
+     "n": 12
+    },
+    {
+     "var": "q51r14",
+     "label": "דניאלה דואק[dad.jpg]",
+     "n": 11
+    },
+    {
+     "var": "q51r15",
+     "label": "גילי הבר דויד (גיליגולי)[gh.jpg]",
+     "n": 11
+    },
+    {
+     "var": "q51r16",
+     "label": "פופו נקטיב[pn.jpg]",
+     "n": 1
+    },
+    {
+     "var": "q51r17",
+     "label": "נועם כהן[nk.jpg]",
+     "n": 3
+    },
+    {
+     "var": "q51r18",
+     "label": "טליה וליאל[tandl.jpg]",
+     "n": 32
+    },
+    {
+     "var": "q51r19",
+     "label": "בר זומר ואביב[banda.jpg]",
+     "n": 39
+    },
+    {
+     "var": "q51r20",
+     "label": "בר ואליאב[bande.jpg]",
+     "n": 37
+    },
+    {
+     "var": "q51r21",
+     "label": "ירדן ועמית[yanda.jpg]",
+     "n": 24
+    },
+    {
+     "var": "q51r22",
+     "label": "אופיר ועמית[oanda.jpg]",
+     "n": 18
+    },
+    {
+     "var": "q51r23",
+     "label": "לא עוקבת אחרי אף אחד מהם",
+     "n": 169
+    },
+    {
+     "var": "q51r24",
+     "label": "אין לי פרופיל באינסטגרם ו/או טיקטוק",
+     "n": 69
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q52",
+   "dict_var": "RECINF_BR",
+   "question": "האם נחשפת בשבועות האחרונים לפעילות של האגיס עם המשפיענים הבאים באינטרנט?סמני רק את המשפיענים אצלהם נחשפת לפעילות של",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q52r1",
+     "label": "קורין גדעון[kg2.jpg]",
+     "n": 59
+    },
+    {
+     "var": "q52r2",
+     "label": "טליה עובדיה[to2.jpg]",
+     "n": 41
+    },
+    {
+     "var": "q52r3",
+     "label": "שובל ריזין[sr2.jpg]",
+     "n": 3
+    },
+    {
+     "var": "q52r4",
+     "label": "ירדן ויזל[yv2.jpg]",
+     "n": 30
+    },
+    {
+     "var": "q52r5",
+     "label": "ליקי רוזנברג מיכאלי[lr2.jpg]",
+     "n": 13
+    },
+    {
+     "var": "q52r6",
+     "label": "גל כהן [gk2.jpg]",
+     "n": 14
+    },
+    {
+     "var": "q52r7",
+     "label": "תאיר זיידמן[tz2.jpg]",
+     "n": 1
+    },
+    {
+     "var": "q52r8",
+     "label": "דורין דותן [dod2.jpg]",
+     "n": 10
+    },
+    {
+     "var": "q52r9",
+     "label": "אדווה כלפון [ak2.jpg]",
+     "n": 2
+    },
+    {
+     "var": "q52r10",
+     "label": "טל מור[tm2.jpg]",
+     "n": 4
+    },
+    {
+     "var": "q52r11",
+     "label": "בר כהן[bk2.jpg]",
+     "n": 31
+    },
+    {
+     "var": "q52r12",
+     "label": "דניאלה שרביט[ds2.jpg]",
+     "n": 15
+    },
+    {
+     "var": "q52r13",
+     "label": "רוני פרץ[rp2.jpg]",
+     "n": 7
+    },
+    {
+     "var": "q52r14",
+     "label": "דניאלה דואק[dad2.jpg]",
+     "n": 8
+    },
+    {
+     "var": "q52r15",
+     "label": "גילי הבר דויד (גיליגולי)[gh2.jpg]",
+     "n": 4
+    },
+    {
+     "var": "q52r16",
+     "label": "פופו נקטיב[pn2.jpg]",
+     "n": 1
+    },
+    {
+     "var": "q52r17",
+     "label": "נועם כהן[nk2.jpg]",
+     "n": 3
+    },
+    {
+     "var": "q52r18",
+     "label": "טליה וליאל[tandl2.jpg]",
+     "n": 48
+    },
+    {
+     "var": "q52r19",
+     "label": "בר זומר ואביב[banda2.jpg]",
+     "n": 23
+    },
+    {
+     "var": "q52r20",
+     "label": "בר ואליאב[bande2.jpg]",
+     "n": 21
+    },
+    {
+     "var": "q52r21",
+     "label": "ירדן ועמית[yanda2.jpg]",
+     "n": 12
+    },
+    {
+     "var": "q52r22",
+     "label": "אופיר ועמית[oanda2.jpg]",
+     "n": 11
+    },
+    {
+     "var": "q52r23",
+     "label": "לא ראיתי אף אחד מהם",
+     "n": 261
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "q6",
+   "dict_var": null,
+   "question": "האם את מכירה או שמעת על המותגים הבאים?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "q6r1",
+     "label": "האגיס[huggies.jpg]",
+     "n": 397
+    },
+    {
+     "var": "q6r2",
+     "label": "טיטולים[titulim.jpg]",
+     "n": 346
+    },
+    {
+     "var": "q6r3",
+     "label": "פמפרס[pampers.jpg]",
+     "n": 393
+    },
+    {
+     "var": "q6r4",
+     "label": "בייביסיטר[babysitter.jpg]",
+     "n": 364
+    },
+    {
+     "var": "q6r5",
+     "label": "לייף בייביס[life.jpg]",
+     "n": 294
+    },
+    {
+     "var": "q6r6",
+     "label": "שופרסל בייבי[shufersal.jpg]",
+     "n": 0
+    },
+    {
+     "var": "q6r7",
+     "label": "לא שמעתי על אף אחד מהם",
+     "n": 0
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "TOTAL_MESSAGEtxt",
+   "dict_var": null,
+   "question": "43",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "TOTAL_MESSAGEtxtnone",
+     "label": "None of These Classifications Apply",
+     "n": 0
+    },
+    {
+     "var": "TOTAL_MESSAGEtxtr1",
+     "label": "איזה דברים נוספים הפרסומת אמרה לך לגבי האגיס?",
+     "n": 384
+    },
+    {
+     "var": "TOTAL_MESSAGEtxtr2",
+     "label": "איזה דברים הפרסומת אמרה לך לגבי האגיס?",
+     "n": 22
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "USAGELASTYEAR",
+   "dict_var": null,
+   "question": "איזה מהמותגים הבאים קנית בשנה האחרונה?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "USAGELASTYEARr1",
+     "label": "האגיס[huggies.jpg]",
+     "n": 307
+    },
+    {
+     "var": "USAGELASTYEARr2",
+     "label": "טיטולים[titulim.jpg]",
+     "n": 122
+    },
+    {
+     "var": "USAGELASTYEARr3",
+     "label": "פמפרס[pampers.jpg]",
+     "n": 197
+    },
+    {
+     "var": "USAGELASTYEARr4",
+     "label": "בייביסיטר[babysitter.jpg]",
+     "n": 122
+    },
+    {
+     "var": "USAGELASTYEARr5",
+     "label": "לייף בייביס[life.jpg]",
+     "n": 86
+    },
+    {
+     "var": "USAGELASTYEARr6",
+     "label": "שופרסל בייבי[shufersal.jpg]",
+     "n": 0
+    },
+    {
+     "var": "USAGELASTYEARr7",
+     "label": "אחר",
+     "n": 9
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "USAGE",
+   "dict_var": null,
+   "question": "איזה ממותגי החיתולים הבאים קנית בשלושת החודשים האחרונים?",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "USAGEr1",
+     "label": "האגיס[huggies.jpg]",
+     "n": 246
+    },
+    {
+     "var": "USAGEr2",
+     "label": "טיטולים[titulim.jpg]",
+     "n": 77
+    },
+    {
+     "var": "USAGEr3",
+     "label": "פמפרס[pampers.jpg]",
+     "n": 145
+    },
+    {
+     "var": "USAGEr4",
+     "label": "בייביסיטר[babysitter.jpg]",
+     "n": 77
+    },
+    {
+     "var": "USAGEr5",
+     "label": "לייף בייביס[life.jpg]",
+     "n": 49
+    },
+    {
+     "var": "USAGEr6",
+     "label": "שופרסל בייבי[shufersal.jpg]",
+     "n": 0
+    },
+    {
+     "var": "USAGEr7",
+     "label": "אחר",
+     "n": 4
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vctq1",
+   "dict_var": null,
+   "question": "חשיפה לכלל הקמפיי",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vctq1c1",
+     "label": "חשיפה לפחות פעם אחת",
+     "n": 217
+    },
+    {
+     "var": "vctq1c2",
+     "label": "לא נחשפו בכלל",
+     "n": 189
+    },
+    {
+     "var": "vctq1c3",
+     "label": "חשיפה לפעילות משפיענים",
+     "n": 150
+    },
+    {
+     "var": "vctq1c4",
+     "label": "לא נחשפו",
+     "n": 256
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vctq2",
+   "dict_var": null,
+   "question": "סרטון ראש",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vctq2c1",
+     "label": "נחשפו להכל",
+     "n": 14
+    },
+    {
+     "var": "vctq2c2",
+     "label": "חשיפה לסרטון ודיגיטל",
+     "n": 45
+    },
+    {
+     "var": "vctq2c3",
+     "label": "חשיפה סרטון ראשי בלבד",
+     "n": 32
+    },
+    {
+     "var": "vctq2c4",
+     "label": "חשיפה לדיגיטל ללא סרטון ראשי",
+     "n": 171
+    },
+    {
+     "var": "vctq2c5",
+     "label": "לא נחשפו בכלל",
+     "n": 189
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vctq3",
+   "dict_var": null,
+   "question": "חשיפ",
+   "type": "multi",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vctq3c1",
+     "label": "חשיפה לסרטון בלבד",
+     "n": 10
+    },
+    {
+     "var": "vctq3c2",
+     "label": "משפיענים בלבד",
+     "n": 25
+    },
+    {
+     "var": "vctq3c3",
+     "label": "חשיפה דיגיטל בלבד",
+     "n": 33
+    },
+    {
+     "var": "vctq3c4",
+     "label": "חשיפה לסרטון ומשפיענים",
+     "n": 9
+    },
+    {
+     "var": "vctq3c5",
+     "label": "חשיפה לסרטון ודיגיטל",
+     "n": 24
+    },
+    {
+     "var": "vctq3c6",
+     "label": "חשיפה משפיענים ודיגיטל",
+     "n": 43
+    },
+    {
+     "var": "vctq3c7",
+     "label": "נחשפו לכולם",
+     "n": 73
+    },
+    {
+     "var": "vctq3c8",
+     "label": "לא נחשפו בכלל",
+     "n": 189
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vq32_coded",
+   "dict_var": "SEMIAEX-VD",
+   "question": "מה זכור לך מהפרסומות של של האגיס? מה הוצג בהן? מה נאמר בהן?",
+   "type": "coded_open",
+   "base": "all",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq32_codedr1",
+     "label": "לא זוכר",
+     "n": 32
+    },
+    {
+     "var": "vq32_codedr2",
+     "label": "תינוקות (ללא פירוט)",
+     "n": 1
+    },
+    {
+     "var": "vq32_codedr3",
+     "label": "חיתולי Free Feel",
+     "n": 6
+    },
+    {
+     "var": "vq32_codedr4",
+     "label": "חיתולים חדשים/ סוג חדש",
+     "n": 37
+    },
+    {
+     "var": "vq32_codedr5",
+     "label": "חיתולים איכותיים",
+     "n": 3
+    },
+    {
+     "var": "vq32_codedr6",
+     "label": "הכי טוב",
+     "n": 1
+    },
+    {
+     "var": "vq32_codedr7",
+     "label": "טכנולוגיה חדשה",
+     "n": 3
+    },
+    {
+     "var": "vq32_codedr8",
+     "label": "נוחות החיתולים",
+     "n": 18
+    },
+    {
+     "var": "vq32_codedr9",
+     "label": "סופג טוב יותר",
+     "n": 35
+    },
+    {
+     "var": "vq32_codedr10",
+     "label": "העור יבש אחרי לילה שלם",
+     "n": 4
+    },
+    {
+     "var": "vq32_codedr11",
+     "label": "טוב לעור התינוק",
+     "n": 7
+    },
+    {
+     "var": "vq32_codedr12",
+     "label": "חיתולים רכים",
+     "n": 6
+    },
+    {
+     "var": "vq32_codedr13",
+     "label": "חיתולים דקים/ דק",
+     "n": 31
+    },
+    {
+     "var": "vq32_codedr14",
+     "label": "הקריינות של איל קיציס",
+     "n": 1
+    },
+    {
+     "var": "vq32_codedr15",
+     "label": "תינוק ישן",
+     "n": 5
+    },
+    {
+     "var": "vq32_codedr16",
+     "label": "תינוק שמח",
+     "n": 14
+    },
+    {
+     "var": "vq32_codedr17",
+     "label": "הורים",
+     "n": 9
+    },
+    {
+     "var": "vq32_codedr18",
+     "label": "מבצע",
+     "n": 4
+    },
+    {
+     "var": "vq32_codedr19",
+     "label": "פרסום ברשתות החברתיות/ פרסום של משפיענים",
+     "n": 3
+    },
+    {
+     "var": "vq32_codedr99",
+     "label": "אחר",
+     "n": 1
+    }
+   ],
+   "wanted": [
+    {
+     "united": "SEMIAEX-VD#01",
+     "label": "חשיפה בלתי מוכחת"
+    },
+    {
+     "united": "SEMIAEX-VD_gross#01",
+     "label": "חשיפה מוכחת - מהמדגם (כולל פרזנטור ושפה)"
+    },
+    {
+     "united": "SEMIAEX-VD_NET#01",
+     "label": "חשיפה מוכחת נטו - לאלמנטים ייחודיים - מהמדגם (ללא פרזנטור ושפה)"
+    },
+    {
+     "united": "SEMIAEX-VD_PRS#01",
+     "label": "ציינו את הפרזנטור בשפה"
+    },
+    {
+     "united": "SEMIAEX-VD_LNG#01",
+     "label": "ציינו אלמנטים מהשפה הפרסומית במוכח (כולל פרזנטור)"
+    },
+    {
+     "united": "SEMIAEX-VD_MSG#01",
+     "label": "מצייני אלמנטים ממסר עיקרי במוכח"
+    },
+    {
+     "united": "SEMIAEX-VD_BRD#01",
+     "label": "ציינו את שם המותג במוכח"
+    }
+   ],
+   "current": {
+    "SEMIAEX-VD#01": {
+     "exclude": [
+      "vq32_codedr1"
+     ]
+    }
+   }
+  },
+  {
+   "key": "vq36_coded",
+   "dict_var": "LIKES",
+   "question": "מה מצא חן בעיניך בפרסומת?",
+   "type": "coded_open",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq36_codedr1",
+     "label": "לא יודע",
+     "n": 1
+    },
+    {
+     "var": "vq36_codedr2",
+     "label": "אהבתי הכל",
+     "n": 7
+    },
+    {
+     "var": "vq36_codedr3",
+     "label": "הומור",
+     "n": 46
+    },
+    {
+     "var": "vq36_codedr4",
+     "label": "השחקנים",
+     "n": 2
+    },
+    {
+     "var": "vq36_codedr5",
+     "label": "תינוקות חמודים",
+     "n": 46
+    },
+    {
+     "var": "vq36_codedr6",
+     "label": "פרסומת יפה",
+     "n": 22
+    },
+    {
+     "var": "vq36_codedr7",
+     "label": "עיצוב גרפי",
+     "n": 7
+    },
+    {
+     "var": "vq36_codedr8",
+     "label": "צבעוניות",
+     "n": 13
+    },
+    {
+     "var": "vq36_codedr9",
+     "label": "עריכה",
+     "n": 3
+    },
+    {
+     "var": "vq36_codedr10",
+     "label": "צילום",
+     "n": 6
+    },
+    {
+     "var": "vq36_codedr11",
+     "label": "תסריט",
+     "n": 2
+    },
+    {
+     "var": "vq36_codedr12",
+     "label": "פסקול",
+     "n": 4
+    },
+    {
+     "var": "vq36_codedr13",
+     "label": "קריינות",
+     "n": 16
+    },
+    {
+     "var": "vq36_codedr14",
+     "label": "הדיבור העממי",
+     "n": 5
+    },
+    {
+     "var": "vq36_codedr15",
+     "label": "תוכן מעניין",
+     "n": 17
+    },
+    {
+     "var": "vq36_codedr16",
+     "label": "מסר ברור",
+     "n": 15
+    },
+    {
+     "var": "vq36_codedr17",
+     "label": "קצרה",
+     "n": 5
+    },
+    {
+     "var": "vq36_codedr18",
+     "label": "מקורית",
+     "n": 11
+    },
+    {
+     "var": "vq36_codedr19",
+     "label": "קלילות",
+     "n": 22
+    },
+    {
+     "var": "vq36_codedr20",
+     "label": "מסקרן/ משכנע",
+     "n": 13
+    },
+    {
+     "var": "vq36_codedr21",
+     "label": "הרעיון של המוצר",
+     "n": 15
+    },
+    {
+     "var": "vq36_codedr22",
+     "label": "רכות",
+     "n": 9
+    },
+    {
+     "var": "vq36_codedr23",
+     "label": "אווירה כייפית",
+     "n": 6
+    },
+    {
+     "var": "vq36_codedr24",
+     "label": "תחושת הזדהות",
+     "n": 50
+    },
+    {
+     "var": "vq36_codedr25",
+     "label": "העברת תחושת הנוחות",
+     "n": 5
+    },
+    {
+     "var": "vq36_codedr26",
+     "label": "פרפרים",
+     "n": 3
+    },
+    {
+     "var": "vq36_codedr99",
+     "label": "אחר",
+     "n": 1
+    }
+   ],
+   "wanted": [
+    {
+     "united": "LIKES#01",
+     "label": "סה\"כ ציינו דברים שאהבו"
+    }
+   ],
+   "current": {
+    "LIKES#01": {
+     "exclude": [
+      "vq36_codedr1"
+     ]
+    }
+   }
+  },
+  {
+   "key": "vq37_coded",
+   "dict_var": "DISLIKES",
+   "question": "מה לא מצא חן בעיניך בפרסומת?",
+   "type": "coded_open",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq37_codedr1",
+     "label": "לא יודע",
+     "n": 12
+    },
+    {
+     "var": "vq37_codedr2",
+     "label": "אהבתי הכל",
+     "n": 12
+    },
+    {
+     "var": "vq37_codedr3",
+     "label": "לא אהבתי כלום",
+     "n": 22
+    },
+    {
+     "var": "vq37_codedr4",
+     "label": "ארוכה מדי",
+     "n": 37
+    },
+    {
+     "var": "vq37_codedr5",
+     "label": "קצרה מדי",
+     "n": 0
+    },
+    {
+     "var": "vq37_codedr6",
+     "label": "משעממת",
+     "n": 21
+    },
+    {
+     "var": "vq37_codedr7",
+     "label": "לא מקורית",
+     "n": 5
+    },
+    {
+     "var": "vq37_codedr8",
+     "label": "ההומור",
+     "n": 3
+    },
+    {
+     "var": "vq37_codedr9",
+     "label": "חופרת",
+     "n": 11
+    },
+    {
+     "var": "vq37_codedr10",
+     "label": "סתמית",
+     "n": 8
+    },
+    {
+     "var": "vq37_codedr11",
+     "label": "לא אמינה",
+     "n": 13
+    },
+    {
+     "var": "vq37_codedr12",
+     "label": "מסר לא ברור",
+     "n": 19
+    },
+    {
+     "var": "vq37_codedr13",
+     "label": "קריינות",
+     "n": 8
+    },
+    {
+     "var": "vq37_codedr14",
+     "label": "התינוקות",
+     "n": 3
+    },
+    {
+     "var": "vq37_codedr15",
+     "label": "הצגת ההורים כמיואשים",
+     "n": 6
+    },
+    {
+     "var": "vq37_codedr16",
+     "label": "עניין ה-\"ה\"",
+     "n": 5
+    },
+    {
+     "var": "vq37_codedr17",
+     "label": "מיותר לפרסם חיתולים",
+     "n": 4
+    },
+    {
+     "var": "vq37_codedr18",
+     "label": "שימוש בבינה מלאכותית",
+     "n": 5
+    },
+    {
+     "var": "vq37_codedr99",
+     "label": "אחר",
+     "n": 1
+    }
+   ],
+   "wanted": [
+    {
+     "united": "DISLIKES#01",
+     "label": "סה\"כ ציינו דברים שלא אהבו (בנצ' הפוך)"
+    }
+   ],
+   "current": {
+    "DISLIKES#01": {
+     "exclude": [
+      "vq37_codedr1",
+      "vq37_codedr2",
+      "vq37_codedr3"
+     ]
+    }
+   }
+  },
+  {
+   "key": "vq4a_coded",
+   "dict_var": null,
+   "question": "צייני שמות של מותגי חיתולים חד פעמיים שאת מכירה, ראית או ששמעת עליהם.רשמי את השם הראשון שעולה בראשך בתיבה הראשונה.",
+   "type": "coded_open",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq4a_codedr1",
+     "label": "לא מכיר",
+     "n": 2
+    },
+    {
+     "var": "vq4a_codedr2",
+     "label": "האגיס",
+     "n": 218
+    },
+    {
+     "var": "vq4a_codedr3",
+     "label": "פאמפרס",
+     "n": 106
+    },
+    {
+     "var": "vq4a_codedr4",
+     "label": "טיטולים",
+     "n": 29
+    },
+    {
+     "var": "vq4a_codedr5",
+     "label": "בייביסיטר",
+     "n": 32
+    },
+    {
+     "var": "vq4a_codedr6",
+     "label": "לייף",
+     "n": 13
+    },
+    {
+     "var": "vq4a_codedr7",
+     "label": "שופרסל",
+     "n": 0
+    },
+    {
+     "var": "vq4a_codedr8",
+     "label": "רמי לוי",
+     "n": 0
+    },
+    {
+     "var": "vq4a_codedr9",
+     "label": "יש",
+     "n": 0
+    },
+    {
+     "var": "vq4a_codedr10",
+     "label": "מונדודו",
+     "n": 2
+    },
+    {
+     "var": "vq4a_codedr11",
+     "label": "במבינו",
+     "n": 0
+    },
+    {
+     "var": "vq4a_codedr99",
+     "label": "אחר",
+     "n": 4
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vq4b_coded",
+   "dict_var": null,
+   "question": "סה\"כ אזכורי",
+   "type": "coded_open",
+   "base": "asked",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq4b_codedr1",
+     "label": "לא מכיר",
+     "n": 2
+    },
+    {
+     "var": "vq4b_codedr2",
+     "label": "האגיס",
+     "n": 391
+    },
+    {
+     "var": "vq4b_codedr3",
+     "label": "פאמפרס",
+     "n": 362
+    },
+    {
+     "var": "vq4b_codedr4",
+     "label": "טיטולים",
+     "n": 202
+    },
+    {
+     "var": "vq4b_codedr5",
+     "label": "בייביסיטר",
+     "n": 234
+    },
+    {
+     "var": "vq4b_codedr6",
+     "label": "לייף",
+     "n": 169
+    },
+    {
+     "var": "vq4b_codedr7",
+     "label": "שופרסל",
+     "n": 22
+    },
+    {
+     "var": "vq4b_codedr8",
+     "label": "רמי לוי",
+     "n": 33
+    },
+    {
+     "var": "vq4b_codedr9",
+     "label": "יש",
+     "n": 8
+    },
+    {
+     "var": "vq4b_codedr10",
+     "label": "מונדודו",
+     "n": 5
+    },
+    {
+     "var": "vq4b_codedr11",
+     "label": "במבינו",
+     "n": 11
+    },
+    {
+     "var": "vq4b_codedr99",
+     "label": "אחר",
+     "n": 4
+    }
+   ],
+   "wanted": [],
+   "current": {}
+  },
+  {
+   "key": "vq5_coded",
+   "dict_var": "UNEXPOSEB",
+   "question": "האם ראית לאחרונה פרסומות לחיתולים חד פעמיים? אם כן לאיזה מותגים?",
+   "type": "coded_open",
+   "base": "all",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vq5_codedr1",
+     "label": "לא ראיתי",
+     "n": 216
+    },
+    {
+     "var": "vq5_codedr2",
+     "label": "ראיתי ולא זוכר שמות",
+     "n": 5
+    },
+    {
+     "var": "vq5_codedr3",
+     "label": "האגיס",
+     "n": 146
+    },
+    {
+     "var": "vq5_codedr4",
+     "label": "פאמפארס",
+     "n": 60
+    },
+    {
+     "var": "vq5_codedr5",
+     "label": "טיטולים",
+     "n": 1
+    },
+    {
+     "var": "vq5_codedr6",
+     "label": "לייף",
+     "n": 8
+    },
+    {
+     "var": "vq5_codedr7",
+     "label": "בייביסיטר",
+     "n": 10
+    },
+    {
+     "var": "vq5_codedr99",
+     "label": "אחר",
+     "n": 0
+    }
+   ],
+   "wanted": [
+    {
+     "united": "UNEXPOSEB#01",
+     "label": "חשיפה בלתי נעזרת למותג"
+    }
+   ],
+   "current": {
+    "UNEXPOSEB#01": {
+     "include": [
+      "vq5_codedr3"
+     ],
+     "note": "המותג הנבדק בטבלת סה\"כ אזכורים"
+    }
+   }
+  },
+  {
+   "key": "vSLOGAN_coded",
+   "dict_var": "SLOGAN",
+   "question": "רשמי בבקשה כל סיסמה שזכורה לך מהפרסומת.",
+   "type": "coded_open",
+   "base": "all",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vSLOGAN_codedr1",
+     "label": "לא יודע",
+     "n": 81
+    },
+    {
+     "var": "vSLOGAN_codedr2",
+     "label": "We got you, baby",
+     "n": 101
+    },
+    {
+     "var": "vSLOGAN_codedr3",
+     "label": "תקופת ה-\"ה\"",
+     "n": 66
+    },
+    {
+     "var": "vSLOGAN_codedr4",
+     "label": "היי בייבי",
+     "n": 4
+    },
+    {
+     "var": "vSLOGAN_codedr5",
+     "label": "ספיגה עד 12 שעות",
+     "n": 39
+    },
+    {
+     "var": "vSLOGAN_codedr6",
+     "label": "Free Feel",
+     "n": 29
+    },
+    {
+     "var": "vSLOGAN_codedr7",
+     "label": "חופשי להרגיש את העולם",
+     "n": 18
+    },
+    {
+     "var": "vSLOGAN_codedr8",
+     "label": "טכנולוגיית ThinTech Core",
+     "n": 6
+    },
+    {
+     "var": "vSLOGAN_codedr9",
+     "label": "במיוחד בשבילך",
+     "n": 6
+    },
+    {
+     "var": "vSLOGAN_codedr10",
+     "label": "רך כמשי",
+     "n": 40
+    },
+    {
+     "var": "vSLOGAN_codedr11",
+     "label": "דק פי 2",
+     "n": 19
+    },
+    {
+     "var": "vSLOGAN_codedr12",
+     "label": "חיתולים דקים",
+     "n": 54
+    },
+    {
+     "var": "vSLOGAN_codedr13",
+     "label": "חיתול נוח",
+     "n": 13
+    },
+    {
+     "var": "vSLOGAN_codedr14",
+     "label": "חיתול סופג",
+     "n": 22
+    },
+    {
+     "var": "vSLOGAN_codedr15",
+     "label": "מוצר חדש",
+     "n": 11
+    },
+    {
+     "var": "vSLOGAN_codedr16",
+     "label": "המותג המוביל בישראל",
+     "n": 8
+    },
+    {
+     "var": "vSLOGAN_codedr17",
+     "label": "האגיס (כללי)",
+     "n": 7
+    },
+    {
+     "var": "vSLOGAN_codedr18",
+     "label": "הורים ותינוק",
+     "n": 3
+    },
+    {
+     "var": "vSLOGAN_codedr99",
+     "label": "אחר",
+     "n": 4
+    }
+   ],
+   "wanted": [
+    {
+     "united": "SLOGAN#01",
+     "label": "סה\"כ ציינו סיסמא נכונה"
+    }
+   ],
+   "current": {}
+  },
+  {
+   "key": "vSPONTIMPRESSION_coded",
+   "dict_var": "SPONTIMPRESSION",
+   "question": "מה לדעתך רצו להגיד בפרסומת לגבי האגיס? מהם המסרים שניסו להעביר באמצעותה לגבי המותג?",
+   "type": "coded_open",
+   "base": "all",
+   "n_total": 406,
+   "codes": [
+    {
+     "var": "vSPONTIMPRESSION_codedr1",
+     "label": "לא יודע",
+     "n": 16
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr2",
+     "label": "שיווק למוצר",
+     "n": 18
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr3",
+     "label": "חיתול חדש",
+     "n": 109
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr4",
+     "label": "חיתולים איכותיים",
+     "n": 56
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr5",
+     "label": "מתאים לעור התינוק",
+     "n": 18
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr6",
+     "label": "מתאים לשעות הלילה",
+     "n": 26
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr7",
+     "label": "אפשר לסמוך על החיתולים שלהם",
+     "n": 3
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr8",
+     "label": "הכי טוב לבייבי שלך",
+     "n": 18
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr9",
+     "label": "חיתול דק",
+     "n": 134
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr10",
+     "label": "נוחות בתנועה",
+     "n": 77
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr11",
+     "label": "יעילות החיתול",
+     "n": 8
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr12",
+     "label": "רכות החיתול",
+     "n": 45
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr13",
+     "label": "ספיגה טובה",
+     "n": 83
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr14",
+     "label": "מתאים לכל התינוקות",
+     "n": 18
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr15",
+     "label": "מתאים לכל מצב",
+     "n": 31
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr16",
+     "label": "החיתול עובר מסע",
+     "n": 6
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr17",
+     "label": "דואגים מגיל אפס",
+     "n": 11
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr18",
+     "label": "הזדהות עם ההורים",
+     "n": 23
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr19",
+     "label": "אמינות",
+     "n": 3
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr20",
+     "label": "מחיר טוב",
+     "n": 0
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr21",
+     "label": "חברה טובה",
+     "n": 36
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr22",
+     "label": "להצחיק",
+     "n": 1
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr23",
+     "label": "חיתול עם טכנולוגיה חדשה",
+     "n": 17
+    },
+    {
+     "var": "vSPONTIMPRESSION_codedr99",
+     "label": "אחר",
+     "n": 1
+    }
+   ],
+   "wanted": [
+    {
+     "united": "SPONTIMPRESSION#01",
+     "label": "סה\"כ מסרים בלתי נעזר מהמדגם"
+    },
+    {
+     "united": "SPONTIMP_CORRECT#01",
+     "label": "סה\"כ ציינו מסרים נכונים"
+    },
+    {
+     "united": "SPONTIMP_MAIN#01",
+     "label": "מצייני מסר עיקרי בלתי נעזר נכון (לאחר הצגה בקרב המדגם)"
+    },
+    {
+     "united": "SPONTIMP_SEC#01",
+     "label": "מצייני מסר משני בלתי נעזר (מהמדגם לאחר הצגה)"
+    },
+    {
+     "united": "SPONTIMPRESS_BRD#01",
+     "label": "ציינו את שם המותג במסרים"
+    }
+   ],
+   "current": {
+    "SPONTIMPRESSION#01": {
+     "exclude": [
+      "vSPONTIMPRESSION_codedr1"
+     ]
+    }
+   }
+  }
+ ]
+}
