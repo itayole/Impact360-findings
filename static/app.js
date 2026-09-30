@@ -231,6 +231,10 @@ function comboDict(current, onPick) {
       ...items.map(v => h('div', { class: 'opt' + (v.var === current ? ' cur' : ''), onclick: () => { close(); onPick(v.var); } },
         h('code', null, v.var), ' ', v.title, h('span', { class: 'muted' }, v.module ? ' · ' + v.module : ''))),
       items.length ? null : h('div', { class: 'opt muted' }, 'אין התאמה'));
+    if (all && current) {   // start the list at the current variable (its neighbours are the related family, e.g. REC*); the rest is one scroll away
+      const cur = panel.querySelector('.opt.cur');
+      if (cur) panel.scrollTop = Math.max(0, cur.offsetTop - 2 * cur.offsetHeight);
+    }
   }
   inp.addEventListener('focus', () => { inp.select(); open(true); });
   inp.addEventListener('input', () => open(false));
