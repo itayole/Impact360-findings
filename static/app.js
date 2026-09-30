@@ -54,6 +54,15 @@ function askText(msg, def = '') {   // in-page replacement for prompt() (not ava
   });
 }
 
+function askConfirm(msg) {
+  return new Promise(res => {
+    const done = v => { ov.remove(); res(v); };
+    const ov = h('div', { class: 'overlay' }, h('div', { class: 'dlg' }, h('div', { style: 'margin-bottom:10px;font-weight:600' }, msg),
+      h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => done(true) }, 'המשך'), h('button', { class: 'btn ghost', onclick: () => done(false) }, 'ביטול'))));
+    document.body.append(ov);
+  });
+}
+
 function goStep(k) {
   if (k === 1) return viewStep1();
   if (!S.project || !S.review) return toast('קודם יש לפתוח פרויקט (שלב 1)');
@@ -166,6 +175,7 @@ function sec(title, pill, pillClass, ...body) {
 }
 
 async function viewStep2() {
+  const keepY = S.step === 2 ? window.scrollY : null;   // a decision re-renders the page: stay where the user was
   setStep(2);
   const main = $('#main'); main.replaceChildren();
   const R = S.review, M = R.mapping, pid = S.project.id;
@@ -178,11 +188,42 @@ async function viewStep2() {
       d.structure_changed.length ? `שינוי מבנה: ${d.structure_changed.join(', ')}.` : ''));
   }
   if (S.jumpTo) { const j = S.jumpTo; S.jumpTo = null; S.pendingJump = j; }
-  main.append(secExposure(M, R), secCustomers(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
+  main.append(snapshotBar(), secExposure(M, R), secCustomers(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
   if (S.pendingJump) { const j = S.pendingJump; S.pendingJump = null; setTimeout(() => { const el = $('#sec-5'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 400); }
   const next = h('button', { class: 'btn gold' }, 'המשך להרצה ←');
   next.onclick = () => viewStep3();
   main.append(h('div', { style: 'margin-top:14px' }, next));
+  if (keepY != null && !S.pendingJump) { window.scrollTo(0, keepY); requestAnimationFrame(() => window.scrollTo(0, keepY)); }
+}
+
+/* named snapshots of this study's current settings (not a template): save now, load later to re-run */
+function snapshotBar() {
+  const host = h('div', { class: 'card snap' });
+  async function draw() {
+    let list = [];
+    try { list = await api(`/projects/${S.project.id}/snapshots`); } catch (e) { /* offline handled elsewhere */ }
+    const sel = h('select', null, h('option', { value: '' }, list.length ? 'בחר/י הגדרות שמורות…' : 'אין הגדרות שמורות'),
+      ...list.map(s => h('option', { value: s.id }, `${s.name} · ${s.created_by || '—'} · ${s.created_at.replace('T', ' ')}`)));
+    const save = h('button', { class: 'btn small' }, '💾 שמור את ההגדרות הנוכחיות');
+    save.onclick = () => guarded(save, async () => {
+      const n = await askText('שם להגדרות השמורות (למשל: "לפני שינוי סלוגן"):', S.review.mapping.project.name || '');
+      if (!n) return;
+      await api(`/projects/${S.project.id}/snapshots`, { json: { name: n } }); toast('ההגדרות נשמרו'); draw();
+    });
+    const load = h('button', { class: 'btn small ghost' }, '📂 טען');
+    load.onclick = () => guarded(load, async () => {
+      if (!sel.value) throw new Error('בחר/י הגדרות שמורות');
+      if (!await askConfirm('הטעינה תחליף את ההגדרות הנוכחיות (הן יישמרו אוטומטית כגיבוי). להמשיך?')) return;
+      S.review = await api(`/projects/${S.project.id}/snapshots/${sel.value}/load`, { json: {} });
+      S.catalog = null; toast('ההגדרות נטענו'); S.step === 3 ? viewStep3() : viewStep2();
+    });
+    const del = h('button', { class: 'btn small ghost', title: 'מחק את ההגדרות השמורות שנבחרו' }, '🗑');
+    del.onclick = () => guarded(del, async () => { if (!sel.value) return; await api(`/projects/${S.project.id}/snapshots/${sel.value}`, { method: 'DELETE' }); draw(); });
+    host.replaceChildren(h('div', { class: 'row' }, h('b', null, 'הגדרות שמורות של המחקר:'), save, sel, load, del,
+      h('span', { class: 'muted' }, 'שמירה/טעינה של כל ההחלטות (התאמות, סיכומים, מסרים, חשיפה, לקוחות) — בלי קשר לתבנית לגלים הבאים.')));
+  }
+  draw();
+  return host;
 }
 
 function levelBases(R) { const b = R.levels.bases; return LEVELS.map(l => `${LEVEL_HE[l]}: ${b[l]}`).join(' · '); }
@@ -247,7 +288,7 @@ function comboDict(current, onPick) {
 
 function secQuestions(M, R) {
   const pending = R.pending.length;
-  let onlyPending = pending > 0;
+  let onlyPending = S.onlyPending != null ? S.onlyPending : pending > 0;
   const box = h('div');
   loadDictVars();
   function render() {
@@ -267,7 +308,7 @@ function secQuestions(M, R) {
     });
     box.append(h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בלוק', 'שאלה', 'סוג', 'משתנה מילון', 'ביטחון', 'אישור', 'כלול'].map(x => h('th', null, x)))), h('tbody', null, ...rows))));
   }
-  const filt = h('label', null, h('input', { type: 'checkbox', checked: onlyPending, onchange: e => { onlyPending = e.target.checked; render(); } }), ' הצג רק מה שדורש החלטה');
+  const filt = h('label', null, h('input', { type: 'checkbox', checked: onlyPending, onchange: e => { onlyPending = S.onlyPending = e.target.checked; render(); } }), ' הצג רק מה שדורש החלטה');
   const all = h('button', { class: 'btn small', onclick: () => guarded(all, async () => { await patch({ confirm_all: true }); viewStep2(); }) }, 'אשר את כל ההתאמות המוצעות');
   render();
   return sec('3. שאלות ומילון', pending ? `${pending} דורשות החלטה` : 'הכול מאושר', pending ? 'need' : 'okp',
@@ -439,7 +480,7 @@ async function viewStep3() {
   const go = h('button', { class: 'btn gold' }, 'הרץ ממצאים');
   const prog = h('div'); const out = h('div');
   if (pend.length) card.append(h('div', { class: 'alert warn' }, `שים/י לב: ${pend.length} התאמות לא אושרו (${pend.slice(0, 6).join(', ')}) — הן יופקו כ"ניתוח בלבד" ללא united. ניתן לחזור לשלב 2.`));
-  card.append(h('p', { class: 'muted' }, levelBases(S.review)), go, prog);
+  card.append(h('p', { class: 'muted' }, levelBases(S.review)), snapshotBar(), go, prog);
   if (loadErr) card.prepend(h('div', { class: 'alert warn' }, '⚠ ' + loadErr.message + ' (מוצגים נתונים אחרונים שנטענו)'));
   go.onclick = () => guarded(go, async () => {
     prog.replaceChildren(); out.replaceChildren();

@@ -190,6 +190,28 @@ def results(pid: str):
     return service.results(store, pid)
 
 
+@app.get("/api/projects/{pid}/snapshots")
+def snapshots(pid: str):
+    store.project(pid)
+    return store.snapshots(pid)
+
+
+@app.post("/api/projects/{pid}/snapshots")
+def create_snapshot(pid: str, request: Request, body: dict = Body(...)):
+    return service.save_snapshot(store, pid, body.get("name", ""), user_of(request))
+
+
+@app.post("/api/projects/{pid}/snapshots/{sid}/load")
+def load_snapshot(pid: str, sid: str, request: Request):
+    return service.load_snapshot(store, pid, sid, user_of(request))
+
+
+@app.delete("/api/projects/{pid}/snapshots/{sid}")
+def delete_snapshot(pid: str, sid: str):
+    store.delete_snapshot(pid, sid)
+    return dict(ok=True)
+
+
 @app.get("/api/projects/{pid}/warnings")
 def warnings(pid: str):
     return service.warnings(store, pid)

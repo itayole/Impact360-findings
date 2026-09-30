@@ -80,6 +80,7 @@ td[title], .tab[title], summary[title] { cursor: help; }
 .combo .opt:hover { background: var(--lgold); }
 .combo .opt.cur { background: #e8eefb; font-weight: 700; }
 .combo .opt.none { color: var(--amber); }
+.card.snap { padding: 10px 14px; background: #fbfcfe; }
 .foot { text-align: center; color: #6b7280; font-size: 12px; padding: 16px; border-top: 1px solid var(--line); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
 .kv b { color: var(--navy); }

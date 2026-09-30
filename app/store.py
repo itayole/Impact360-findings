@@ -145,6 +145,36 @@ class Store:
     def load_json(self, pid, name, default=None):
         return _read(os.path.join(self.pdir(pid), name), default)
 
+    def snapshots(self, pid):
+        d = os.path.join(self.pdir(pid), "snapshots")
+        out = []
+        if os.path.isdir(d):
+            for f in os.listdir(d):
+                s = _read(os.path.join(d, f))
+                if s:
+                    out.append(dict(id=s["id"], name=s["name"], created_at=s["created_at"], created_by=s.get("created_by", ""),
+                                    auto=bool(s.get("auto"))))
+        return sorted(out, key=lambda s: s["created_at"], reverse=True)
+
+    def save_snapshot(self, pid, name, mapping, user="", auto=False):
+        with _LOCK:
+            sid = uuid.uuid4().hex[:8]
+            _write(os.path.join(self.pdir(pid), "snapshots", f"{sid}.json"),
+                   dict(id=sid, name=name, created_at=now(), created_by=user, auto=auto, mapping=mapping))
+            return sid
+
+    def get_snapshot(self, pid, sid):
+        if not re.match(r"^[0-9a-f]{8}$", sid or ""):
+            raise KeyError(sid)
+        s = _read(os.path.join(self.pdir(pid), "snapshots", f"{sid}.json"))
+        if s is None:
+            raise KeyError(sid)
+        return s
+
+    def delete_snapshot(self, pid, sid):
+        self.get_snapshot(pid, sid)
+        os.remove(os.path.join(self.pdir(pid), "snapshots", f"{sid}.json"))
+
     def delete_project(self, pid):
         shutil.rmtree(self.pdir(pid), ignore_errors=True)
         for p in (self.sav_path(pid), self.qnr_path(pid)):

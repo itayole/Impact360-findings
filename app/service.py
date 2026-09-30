@@ -346,6 +346,33 @@ def start_run(store, pid, user=""):
     return runtime.jobs.submit(pid, work)
 
 
+# ------------------------------------------------------------------------------------------ snapshots
+def save_snapshot(store, pid, name, user=""):
+    mapping = store.mapping(pid)
+    if mapping is None:
+        raise Bad("טרם הורץ פרופיל")
+    if not (name or "").strip():
+        raise Bad("חסר שם")
+    sid = store.save_snapshot(pid, name.strip(), mapping, user)
+    _log(mapping, user, "snapshot", f"נשמרו הגדרות בשם '{name.strip()}'")
+    store.save_mapping(pid, mapping)
+    return dict(id=sid)
+
+
+def load_snapshot(store, pid, sid, user=""):
+    snap = store.get_snapshot(pid, sid)
+    current = store.mapping(pid)
+    if current is not None:       # never lose the settings being replaced
+        store.save_snapshot(pid, f"גיבוי אוטומטי לפני טעינת '{snap['name']}'", current, user, auto=True)
+    mapping = snap["mapping"]
+    _log(mapping, user, "snapshot", f"נטענו הגדרות שמורות '{snap['name']}' ({snap['created_at'].replace('T', ' ')})")
+    store.save_mapping(pid, mapping)
+    p = store.project(pid)
+    p["stage"] = "reviewed"
+    store.save_project(p)
+    return review_payload(store, pid, mapping)
+
+
 # ------------------------------------------------------------------------------------------ templates
 def save_template(store, pid, name, user="", client="", tracker="", template_id=None):
     mapping = store.mapping(pid)

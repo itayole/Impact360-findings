@@ -133,6 +133,23 @@ def test_message_roles(client):
     assert client.put(f"/api/projects/{pid}/mapping", json={"roles": ["main", "main", "", ""][:n]}).status_code == 400
 
 
+@needs_golden
+def test_snapshots_save_load_delete(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}).json()["project"]["id"]
+    client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס"})
+    client.put(f"/api/projects/{pid}/mapping", json={"questions": {"q33": {"confirmed": True}}}, headers={"x-user": "u1"})
+    sid = client.post(f"/api/projects/{pid}/snapshots", json={"name": "לפני שינוי"}, headers={"x-user": "u1"}).json()["id"]
+    client.put(f"/api/projects/{pid}/mapping", json={"questions": {"q33": {"confirmed": False}, "q49": {"include": False}}})
+    rv = client.post(f"/api/projects/{pid}/snapshots/{sid}/load", json={}).json()
+    q = {e["key"]: e for e in rv["mapping"]["questions"]}
+    assert q["q33"]["confirmed"] is True and q["q49"].get("include", True) is True
+    names = [s["name"] for s in client.get(f"/api/projects/{pid}/snapshots").json()]
+    assert "לפני שינוי" in names and any(n.startswith("גיבוי אוטומטי") for n in names)
+    assert client.delete(f"/api/projects/{pid}/snapshots/{sid}").status_code == 200
+    assert client.post(f"/api/projects/{pid}/snapshots/{sid}/load", json={}).status_code == 404
+    assert client.post(f"/api/projects/{pid}/snapshots", json={"name": " "}).status_code == 400
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400
