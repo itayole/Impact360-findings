@@ -176,7 +176,7 @@ def profile(df, meta, vars_, codes, dictionary_path="", brand="", campaign_id=""
         if forced and stem in forced:      # a human chose the dictionary variable: everything downstream is rebuilt around it
             dvar, conf, score = forced[stem], "manual", 100
         ent = dict(key=stem, vars=cols, dict_var=dvar, confidence=conf, score=round(float(score), 1),
-                   question=question[:200], include=True, review=[])
+                   question=question[:500], include=True, review=[])
 
         # --- verify variable: DP pre-computed "exposed at least once"
         for c in cols:

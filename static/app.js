@@ -188,7 +188,7 @@ function secExposure(M, R) {
   const comps = M.exposure.components;
   const rows = comps.map((c, i) => h('tr', null,
     h('td', null, h('input', { type: 'checkbox', checked: c.enabled !== false, onchange: async e => { await patch({ exposure_enabled: { [i]: e.target.checked } }); viewStep2(); } })),
-    h('td', null, c.question || (Array.isArray(c.var) ? c.var.join(', ') : c.var)),
+    h('td', { title: c.question || '' }, c.question || (Array.isArray(c.var) ? c.var.join(', ') : c.var)),
     h('td', null, h('code', null, c.dict_var || '—')), h('td', null, c.kind === 'any_of' ? 'אחד מתוך רשימה' : 'שאלה בודדת')));
   const chk = R.levels.checks[0];
   return sec('1. חשיפה (Total Exposed)', `נחשפים: ${R.levels.bases.exposed}`, '',
@@ -228,7 +228,7 @@ function secQuestions(M, R) {
       const appr = e.needs_approval ? h('label', null, h('input', { type: 'checkbox', checked: !!e.confirmed, onchange: async ev => { await patch({ questions: { [e.key]: { confirmed: ev.target.checked } } }); viewStep2(); } }), ' אשר') : (e.dict_var ? h('span', { class: 'muted' }, 'מהימן') : null);
       const inc = h('label', null, h('input', { type: 'checkbox', checked: e.include !== false, onchange: async ev => { await patch({ questions: { [e.key]: { include: ev.target.checked } } }); viewStep2(); } }), ' רלוונטי');
       return h('tr', { class: (e.include === false ? 'off ' : '') + (e.needs_approval ? 'need' : '') },
-        h('td', null, h('code', null, e.key)), h('td', null, (e.question || '').slice(0, 90), (e.warnings || []).map(w => h('div', { class: 'muted' }, '⚠ ' + w))),
+        h('td', null, h('code', null, e.key)), h('td', { title: e.question || '' }, (e.question || '').slice(0, 90), (e.warnings || []).map(w => h('div', { class: 'muted' }, '⚠ ' + w))),
         h('td', null, e.type || ''), h('td', null, inp, ' ', apply, e.dict_title ? h('div', { class: 'muted' }, e.dict_title) : null),
         h('td', null, h('span', { class: 'badge ' + e.confidence }, CONF_HE[e.confidence] || e.confidence), e.qnr_item ? h('div', { class: 'muted' }, 'בשאלון: ' + e.qnr_item.tag) : null), h('td', null, appr), h('td', null, inc));
     });
@@ -283,7 +283,7 @@ async function secNets() {
     box.replaceChildren();
     const b = blocks.find(x => x.key === S.netBlock);
     const nets = localNets[b.key];
-    const tabs = h('div', { class: 'tabs' }, ...blocks.map(x => h('span', { class: 'tab' + (x.key === b.key ? ' active' : ''), onclick: () => { S.netBlock = x.key; S.activeNet = null; render(); } },
+    const tabs = h('div', { class: 'tabs' }, ...blocks.map(x => h('span', { class: 'tab' + (x.key === b.key ? ' active' : ''), title: x.question || x.key, onclick: () => { S.netBlock = x.key; S.activeNet = null; render(); } },
       x.key, Object.keys(localNets[x.key]).length ? h('span', { class: 'dot' }) : null)));
     const defs = netDefs(b);
     if (!S.activeNet || !defs.find(d => d.key === S.activeNet)) S.activeNet = defs.length ? defs[0].key : null;
@@ -291,7 +291,7 @@ async function secNets() {
     const setOf = () => new Set(cur ? (cur.include || cur.exclude || []) : []);
     const mode = cur ? (cur.include ? 'include' : 'exclude') : 'include';
 
-    const left = h('div', null, h('div', { class: 'muted', style: 'margin-bottom:6px' }, 'סיכומים לשאלה: ' + (b.dict_var || 'ללא משתנה מילון')),
+    const left = h('div', null, h('div', { class: 'qtext' }, b.question || b.key), h('div', { class: 'muted', style: 'margin-bottom:6px' }, 'סיכומים לשאלה: ' + (b.dict_var || 'ללא משתנה מילון')),
       ...defs.map(d => h('div', { class: 'netitem' + (d.key === S.activeNet ? ' active' : ''), onclick: () => { S.activeNet = d.key; render(); } },
         h('div', { class: 't' }, d.label), h('div', { class: 'muted' }, d.dict ? d.key : 'סיכום בשם חופשי (לא מיובא ל-DATA)'),
         nets[d.key] ? h('div', { class: 'muted' }, (nets[d.key].include ? 'נטו: ' + nets[d.key].include.length + ' קודים' : 'כל תשובה מלבד ' + (nets[d.key].exclude || []).length)) : h('div', { class: 'muted' }, 'לא הוגדר'))),
@@ -384,8 +384,8 @@ function renderTables(host, R, reload) {
       const sums = t.rows.filter(r => r.section === 'summary'), body = t.rows.filter(r => r.section !== 'summary');
       const tr = r => h('tr', { class: r.section === 'summary' ? 'sum' : '' }, h('td', null, r.label, r.note ? h('div', { class: 'muted' }, r.note) : null), h('td', null, r.united ? h('code', null, r.united) : ''), ...LEVELS.map(l => cell(r, l)));
       const conf = t.confidence ? h('span', { class: 'badge ' + t.confidence, style: 'margin-inline-start:8px' }, CONF_HE[t.confidence] || t.confidence) : null;
-      list.append(h('details', { class: 'sec' }, h('summary', null, h('b', null, t.title), h('code', null, t.key), conf, h('span', { class: 'pill' }, t.rows.length + ' שורות')),
-        h('div', { class: 'body' }, h('div', { class: 'row', style: 'margin-bottom:6px' }, editable.has(t.key) ? h('button', { class: 'btn small ghost', onclick: () => editCounts(t.key) }, '✎ הגדר/ערוך סיכומי קודים (counts) לשאלה זו') : null, h('button', { class: 'btn small ghost', onclick: () => viewStep2() }, '← לסקירה (התאמת מילון / אישור)')), t.question ? h('p', { class: 'muted' }, t.question.slice(0, 230)) : null,
+      list.append(h('details', { class: 'sec' }, h('summary', { title: t.question || t.title }, h('b', null, t.title), h('code', null, t.key), conf, t.question ? h('span', { class: 'qhint' }, t.question.slice(0, 70) + (t.question.length > 70 ? '…' : '')) : null, h('span', { class: 'pill' }, t.rows.length + ' שורות')),
+        h('div', { class: 'body' }, h('div', { class: 'row', style: 'margin-bottom:6px' }, editable.has(t.key) ? h('button', { class: 'btn small ghost', onclick: () => editCounts(t.key) }, '✎ הגדר/ערוך סיכומי קודים (counts) לשאלה זו') : null, h('button', { class: 'btn small ghost', onclick: () => viewStep2() }, '← לסקירה (התאמת מילון / אישור)')), t.question ? h('p', { class: 'qtext' }, t.question) : null,
           h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'תשובה'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, `${LEVEL_HE[l]} (${LETTER[l]})`)))),
             h('tbody', null, ...sums.map(tr), ...body.map(tr)))), ...t.notes.map(n => h('div', { class: 'muted', style: 'color:var(--red)' }, '⚠ ' + n)))));
     });

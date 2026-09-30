@@ -72,6 +72,9 @@ td.num.low { color: var(--red); font-style: italic; }
 .progress > div { height: 100%; background: var(--gold); transition: width .3s; }
 #toast { position: fixed; bottom: 20px; inset-inline-start: 20px; background: #111827; color: #fff; padding: 10px 16px; border-radius: 6px; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 420px; }
 #toast.show { opacity: .95; }
+.qtext { background: #f3f5fa; border-inline-start: 3px solid var(--gold); padding: 6px 10px; margin: 0 0 8px; font-size: 14px; }
+.qhint { color: #6b7280; font-size: 12px; margin-inline-start: 8px; font-weight: 400; }
+td[title], .tab[title], summary[title] { cursor: help; }
 .foot { text-align: center; color: #6b7280; font-size: 12px; padding: 16px; border-top: 1px solid var(--line); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
 .kv b { color: var(--navy); }
