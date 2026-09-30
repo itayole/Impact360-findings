@@ -11,6 +11,8 @@ const CONF_HE = { exact: 'exact', alias: 'alias', template: 'תבנית', tag: '
 const S = { project: null, review: null, step: 1, netBlock: null, nets: {}, activeNet: null, catalog: null, dictVars: null };
 const $ = (s, r = document) => r.querySelector(s);
 
+window.addEventListener('unhandledrejection', ev => { toast('⚠ ' + ((ev.reason && ev.reason.message) || 'שגיאה לא צפויה')); });
+
 /* ------------------------------------------------------------------ helpers */
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -30,7 +32,8 @@ function setUser(v) { try { localStorage.setItem('i360user', v); } catch (e) { S
 async function api(path, opts = {}) {
   const o = { method: 'GET', headers: { 'X-User': encodeURIComponent(user() || 'anonymous') }, ...opts };
   if (opts.json !== undefined) { o.method = opts.method || 'POST'; o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opts.json); }
-  const r = await fetch('/api' + path, o);
+  let r;
+  try { r = await fetch('/api' + path, o); } catch (e) { throw new Error('אין חיבור לשרת — ודא/י שהאפליקציה רצה ורענן/י את הדף'); }
   let data = null;
   try { data = await r.json(); } catch (e) { /* not json */ }
   if (!r.ok) throw new Error((data && data.detail) || ('שגיאה ' + r.status));
@@ -428,14 +431,21 @@ function renderTables(host, R, reload) {
 async function viewStep3() {
   setStep(3);
   const main = $('#main'); main.replaceChildren(backBar(viewStep2, 'חזרה לסקירה (עריכת התאמות וסיכומים)'), h('h1', null, 'שלב 3 · הרצה'));
-  await refreshReview();
+  let loadErr = null;
+  try { await refreshReview(); } catch (e) { loadErr = e; }
+  if (loadErr && !S.review) { main.append(h('div', { class: 'alert err' }, '⚠ ' + loadErr.message), h('button', { class: 'btn', onclick: () => viewStep3() }, 'נסה שוב')); return; }
   const pend = S.review.pending;
   const card = h('div', { class: 'card' });
   const go = h('button', { class: 'btn gold' }, 'הרץ ממצאים');
   const prog = h('div'); const out = h('div');
   if (pend.length) card.append(h('div', { class: 'alert warn' }, `שים/י לב: ${pend.length} התאמות לא אושרו (${pend.slice(0, 6).join(', ')}) — הן יופקו כ"ניתוח בלבד" ללא united. ניתן לחזור לשלב 2.`));
   card.append(h('p', { class: 'muted' }, levelBases(S.review)), go, prog);
+  if (loadErr) card.prepend(h('div', { class: 'alert warn' }, '⚠ ' + loadErr.message + ' (מוצגים נתונים אחרונים שנטענו)'));
   go.onclick = () => guarded(go, async () => {
+    prog.replaceChildren(); out.replaceChildren();
+    try { await runJob(); } catch (e) { prog.replaceChildren(h('div', { class: 'alert err' }, '⚠ ההרצה נכשלה: ' + e.message)); }
+  });
+  async function runJob() {
     const { job_id } = await api(`/projects/${S.project.id}/run`, { json: {} });
     const bar = h('div', { class: 'progress' }, h('div', { style: 'width:0%' })); const lbl = h('div', { class: 'muted' }, 'ממתין…');
     prog.replaceChildren(bar, lbl);
@@ -446,7 +456,7 @@ async function viewStep3() {
       if (j.status === 'done') { renderResult(out, j.result); break; }
       await new Promise(r => setTimeout(r, 700));
     }
-  });
+  }
   main.append(card, out, secResults(true));
 }
 
