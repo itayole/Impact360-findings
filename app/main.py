@@ -306,5 +306,23 @@ def _cleanup_loop():
 
 
 
+def _asset_version():
+    """Changes whenever app.js / style.css change, so a browser can never keep serving a stale copy."""
+    m = 0
+    for f in ("app.js", "style.css", "index.html"):
+        p = os.path.join(config.STATIC_DIR, f)
+        if os.path.exists(p):
+            m = max(m, int(os.path.getmtime(p)))
+    return f"{service.APP_VERSION}-{m}"
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+def index():
+    with open(os.path.join(config.STATIC_DIR, "index.html"), encoding="utf-8") as f:
+        html = f.read().replace("{{v}}", _asset_version())
+    return Response(html, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})
+
+
 if os.path.isdir(config.STATIC_DIR):
     app.mount("/", StaticFiles(directory=config.STATIC_DIR, html=True), name="static")
