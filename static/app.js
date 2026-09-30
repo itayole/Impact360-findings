@@ -213,23 +213,49 @@ async function loadDictVars() {
   return S.dictVars;
 }
 
+/* searchable dictionary-variable picker: opens with ALL variables, filters as you type (a native datalist only shows matches of the current text) */
+function comboDict(current, onPick) {
+  const inp = h('input', { type: 'text', class: 'inline-input', value: current || '', placeholder: '(ללא — ניתוח בלבד)', autocomplete: 'off' });
+  const caret = h('button', { type: 'button', class: 'btn small ghost', title: 'הצג את כל המשתנים', onclick: () => { inp.focus(); open(true); } }, '▾');
+  let panel = null;
+  function close() { if (panel) { panel.remove(); panel = null; } document.removeEventListener('mousedown', outside, true); }
+  function outside(ev) { if (panel && !panel.contains(ev.target) && ev.target !== inp && ev.target !== caret) { inp.value = current || ''; close(); } }
+  async function open(all) {
+    const vars = await loadDictVars();
+    const q = all ? '' : inp.value.trim().toLowerCase();
+    const items = vars.filter(v => !q || (v.var + ' ' + v.title + ' ' + v.module).toLowerCase().includes(q)).slice(0, 250);
+    if (!panel) { panel = h('div', { class: 'combo' }); document.body.append(panel); document.addEventListener('mousedown', outside, true); }
+    const r = inp.getBoundingClientRect();
+    Object.assign(panel.style, { top: (r.bottom + 2) + 'px', left: Math.max(4, Math.min(r.left, innerWidth - 360)) + 'px' });
+    panel.replaceChildren(h('div', { class: 'opt none', onclick: () => { close(); onPick(null); } }, '— ללא משתנה מילון (ניתוח בלבד) —'),
+      ...items.map(v => h('div', { class: 'opt' + (v.var === current ? ' cur' : ''), onclick: () => { close(); onPick(v.var); } },
+        h('code', null, v.var), ' ', v.title, h('span', { class: 'muted' }, v.module ? ' · ' + v.module : ''))),
+      items.length ? null : h('div', { class: 'opt muted' }, 'אין התאמה'));
+  }
+  inp.addEventListener('focus', () => { inp.select(); open(true); });
+  inp.addEventListener('input', () => open(false));
+  inp.addEventListener('keydown', ev => { if (ev.key === 'Escape') { inp.value = current || ''; close(); } if (ev.key === 'Enter') { ev.preventDefault(); const v = inp.value.trim(); close(); onPick(v || null); } });
+  return h('span', { style: 'white-space:nowrap' }, inp, ' ', caret);
+}
+
 function secQuestions(M, R) {
   const pending = R.pending.length;
   let onlyPending = pending > 0;
   const box = h('div');
-  const dl = h('datalist', { id: 'dvars' });
-  loadDictVars().then(v => v.forEach(x => dl.append(h('option', { value: x.var }, x.title))));
+  loadDictVars();
   function render() {
     box.replaceChildren();
     const qs = M.questions.filter(e => !onlyPending || (e.include !== false && e.needs_approval) || (e.warnings || []).length);
     const rows = qs.map(e => {
-      const inp = h('input', { type: 'text', class: 'inline-input', list: 'dvars', value: e.dict_var || '', placeholder: '(ללא — ניתוח בלבד)' });
-      const apply = h('button', { class: 'btn small ghost', onclick: () => guarded(apply, async () => { if ((inp.value || '') !== (e.dict_var || '')) { await patch({ remap: { [e.key]: inp.value || null } }); viewStep2(); } }) }, 'החל');
+      const combo = comboDict(e.dict_var || '', async v => {
+        if ((v || '') === (e.dict_var || '')) return;
+        try { await patch({ remap: { [e.key]: v } }); toast(`${e.key}: ${v || 'ללא משתנה מילון'}`); viewStep2(); } catch (err) { toast('⚠ ' + err.message); }
+      });
       const appr = e.needs_approval ? h('label', null, h('input', { type: 'checkbox', checked: !!e.confirmed, onchange: async ev => { await patch({ questions: { [e.key]: { confirmed: ev.target.checked } } }); viewStep2(); } }), ' אשר') : (e.dict_var ? h('span', { class: 'muted' }, 'מהימן') : null);
       const inc = h('label', null, h('input', { type: 'checkbox', checked: e.include !== false, onchange: async ev => { await patch({ questions: { [e.key]: { include: ev.target.checked } } }); viewStep2(); } }), ' רלוונטי');
       return h('tr', { class: (e.include === false ? 'off ' : '') + (e.needs_approval ? 'need' : '') },
         h('td', null, h('code', null, e.key)), h('td', { title: e.question || '' }, (e.question || '').slice(0, 90), (e.warnings || []).map(w => h('div', { class: 'muted' }, '⚠ ' + w))),
-        h('td', null, e.type || ''), h('td', null, inp, ' ', apply, e.dict_title ? h('div', { class: 'muted' }, e.dict_title) : null),
+        h('td', null, e.type || ''), h('td', null, combo, e.dict_title ? h('div', { class: 'muted' }, e.dict_title) : null),
         h('td', null, h('span', { class: 'badge ' + e.confidence }, CONF_HE[e.confidence] || e.confidence), e.qnr_item ? h('div', { class: 'muted' }, 'בשאלון: ' + e.qnr_item.tag) : null), h('td', null, appr), h('td', null, inc));
     });
     box.append(h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בלוק', 'שאלה', 'סוג', 'משתנה מילון', 'ביטחון', 'אישור', 'כלול'].map(x => h('th', null, x)))), h('tbody', null, ...rows))));
@@ -238,8 +264,8 @@ function secQuestions(M, R) {
   const all = h('button', { class: 'btn small', onclick: () => guarded(all, async () => { await patch({ confirm_all: true }); viewStep2(); }) }, 'אשר את כל ההתאמות המוצעות');
   render();
   return sec('3. שאלות ומילון', pending ? `${pending} דורשות החלטה` : 'הכול מאושר', pending ? 'need' : 'okp',
-    h('p', { class: 'muted' }, 'התאמה שאינה exact/alias/תבנית היא הצעה בלבד: אינה נכנסת ל-DATA_לייבוא עד אישור. אפשר להחליף משתנה מילון ידנית (החל). בלוק שאינו רלוונטי (אומניבוס זר) — בטל/י "כלול".'),
-    h('div', { class: 'row', style: 'margin-bottom:8px' }, filt, pending ? all : null), dl, box);
+    h('p', { class: 'muted' }, 'התאמה שאינה exact/alias/תבנית היא הצעה בלבד: אינה נכנסת ל-DATA_לייבוא עד אישור. אפשר להחליף משתנה מילון ידנית: לחץ/י על השדה או על ▾, חפש/י ובחר/י מהרשימה. בלוק שאינו רלוונטי (אומניבוס זר) — בטל/י "כלול".'),
+    h('div', { class: 'row', style: 'margin-bottom:8px' }, filt, pending ? all : null), box);
 }
 
 function secMessages(M, R) {

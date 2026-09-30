@@ -57,6 +57,8 @@ async def guard(request: Request, call_next):
     resp = await call_next(request)
     if request.url.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"        # respondent-derived aggregates must not linger in browser caches
+    elif not request.url.path.startswith("/fonts/"):
+        resp.headers["Cache-Control"] = "no-cache"        # always revalidate app.js/css/html so upgrades reach users at once
     return resp
 
 

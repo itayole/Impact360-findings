@@ -75,6 +75,11 @@ td.num.low { color: var(--red); font-style: italic; }
 .qtext { background: #f3f5fa; border-inline-start: 3px solid var(--gold); padding: 6px 10px; margin: 0 0 8px; font-size: 14px; }
 .qhint { color: #6b7280; font-size: 12px; margin-inline-start: 8px; font-weight: 400; }
 td[title], .tab[title], summary[title] { cursor: help; }
+.combo { position: fixed; z-index: 60; width: 350px; max-height: 320px; overflow: auto; background: #fff; border: 1px solid var(--gold); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.combo .opt { padding: 5px 10px; cursor: pointer; border-bottom: 1px solid #eef0f4; font-size: 13px; }
+.combo .opt:hover { background: var(--lgold); }
+.combo .opt.cur { background: #e8eefb; font-weight: 700; }
+.combo .opt.none { color: var(--amber); }
 .foot { text-align: center; color: #6b7280; font-size: 12px; padding: 16px; border-top: 1px solid var(--line); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
 .kv b { color: var(--navy); }
