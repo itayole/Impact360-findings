@@ -156,6 +156,8 @@ def sheet_findings(wb, ctx):
                         c.font = Font(name="Assistant", size=10, color="C00000", italic=True)   # low base
                     ws.cell(r, 4 + 2 * k, sig_letters(x, lv)).alignment = CENTER
                 note = x["note"]
+                if x.get("members") is not None:
+                    note = (note + " | " if note else "") + C.members_text(x["members"], x["members_mode"])
                 if x["status"]:
                     note = (note + " | " if note else "") + f"סטטוס מילון: {x['status']}"
                 ws.cell(r, last, note).font = F_NOTE

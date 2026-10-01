@@ -195,6 +195,30 @@ def test_summary_order_is_saved_and_drives_row_order(client):
     client.delete(f"/api/projects/{pid}")
 
 
+@needs_golden
+def test_summary_members_in_results_and_workbook(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}).json()["project"]["id"]
+    client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס"})
+    nets = {"SLOGAN#01": {"include": ["vSLOGAN_codedr2"]}, "USER:x": {"exclude": ["vSLOGAN_codedr1"], "label": "הכול חוץ מלא יודע"}}
+    client.put(f"/api/projects/{pid}/mapping", json={"questions": {"vSLOGAN_coded": {"nets": nets, "confirmed": True}}})
+    rs = client.get(f"/api/projects/{pid}/results").json()
+    tb = next(t for t in rs["tables"] if t["key"] == "vSLOGAN_coded")
+    inc = next(r for r in tb["rows"] if r["united"] == "SLOGAN#01")
+    exc = next(r for r in tb["rows"] if r["label"] == "הכול חוץ מלא יודע")
+    assert inc["members_text"] == "כולל: We got you, baby" and exc["members_text"].startswith("כל התשובות מלבד: ")
+    tagged = [r for r in tb["rows"] if r.get("in_nets")]
+    assert len(tagged) == 1 and tagged[0]["in_nets"] == ["סה\"כ ציינו סיסמא נכונה"]
+    j = client.post(f"/api/projects/{pid}/run").json()["job_id"]
+    res = wait_job(client, j)
+    assert res["status"] == "done"
+    wb = openpyxl.load_workbook(io.BytesIO(client.get(f"/api/projects/{pid}/download").content))
+    notes = [r[-1] for r in wb["ממצאים"].iter_rows(values_only=True) if r and r[1] == "SLOGAN#01"]
+    assert any("כולל: We got you, baby" in (n or "") for n in notes)
+    data_notes = [r[8] for r in wb["DATA_לייבוא"].iter_rows(min_row=2, values_only=True) if r[4] == "SLOGAN#01"]
+    assert all("כולל" not in (n or "") for n in data_notes)             # DATA_לייבוא stays as it was
+    client.delete(f"/api/projects/{pid}")
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400

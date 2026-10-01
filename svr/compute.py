@@ -23,6 +23,14 @@ TRUSTED = ("manual", "exact", "tag", "template", "alias")   # matches allowed in
 SUMMARY_ROLES = {"T2B", "TOP", "B3B", "Low3", "MEAN", "INDEX"}
 
 
+def members_text(labels, mode, limit=None):
+    """'כולל: א · ב' / 'כל התשובות מלבד: א · ב'.  `limit` shortens long lists ('... ועוד N'); None = full list."""
+    shown = labels if not limit or len(labels) <= limit else labels[:limit] + [f"ועוד {len(labels) - limit}"]
+    if mode == "exclude":
+        return "כל התשובות מלבד: " + " · ".join(shown) if labels else "כל התשובות"
+    return "כולל: " + " · ".join(shown)
+
+
 def uid(var, slot):
     return f"{var}#{int(slot):02d}"
 
@@ -223,6 +231,8 @@ def do_multi(ctx, e, coded=False):
             rows.append(ctx.row(dv, s, lab, ctx.pct(flags[v], asked)))
         else:
             rows.append(ctx.row(None, 0, lab, ctx.pct(flags[v], asked), section="analysis", united=""))
+    for i_, r_ in enumerate(rows[:len(vars_)]):
+        r_["code_idx"] = i_            # position of the answer row = index of its SAV variable (used to tag nets membership)
     # ---- nets
     nets = e.get("nets") or {}
     for u, spec in nets.items():
@@ -231,12 +241,20 @@ def do_multi(ctx, e, coded=False):
         cond = np.zeros(ctx.n, bool)
         for v in inc:
             cond |= flags[v]
+        mode = "include" if spec.get("include") else "exclude"
+        picked = [v for v in vars_ if v in set(spec.get("include") or spec.get("exclude") or [])]
+        labs = [names.get(v) or v for v in picked]
+        meta_ = dict(members=labs, members_mode=mode, member_idx=[vars_.index(v) for v in inc] if mode == "include" else [])
         if not slot.isdigit() or int(slot) not in ctx.item_codes(var):      # user-defined net without a dictionary slot
-            rows.append(ctx.row(None, 0, spec.get("label", u), ctx.pct(cond, asked), section="summary", united="",
-                                note=spec.get("note", "סיכום מוגדר-משתמש — ללא סלוט במילון (לא ייצא ל-DATA)")))
+            r_ = ctx.row(None, 0, spec.get("label", u), ctx.pct(cond, asked), section="summary", united="",
+                         note=spec.get("note", "סיכום מוגדר-משתמש — ללא סלוט במילון (לא ייצא ל-DATA)"))
+            r_.update(meta_)
+            rows.append(r_)
             continue
-        rows.append(ctx.row(var, int(slot), (ctx.item_codes(var).get(int(slot)) or {}).get("label", u), ctx.pct(cond, asked),
-                            section="summary", note=spec.get("note", "נטו: לפחות קוד מהותי אחד" if not spec.get("include") else "נטו לפי קודים שהוגדרו")))
+        r_ = ctx.row(var, int(slot), (ctx.item_codes(var).get(int(slot)) or {}).get("label", u), ctx.pct(cond, asked),
+                     section="summary", note=spec.get("note", "נטו: לפחות קוד מהותי אחד" if not spec.get("include") else "נטו לפי קודים שהוגדרו"))
+        r_.update(meta_)
+        rows.append(r_)
     # ---- default any-of net for single-slot exposure style variables
     if not nets and dv and list(slots) == [1] and not osl and not coded:
         exc = set(e.get("net_exclude", [])) | {v for v, n in names.items() if any(w in n for w in ("לא ראיתי", "אף אחד", "לא עוקב", "אין לי"))}

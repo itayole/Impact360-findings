@@ -23,6 +23,11 @@ def _serialize(row, ctx, counts=None):
         out["letters"][lv] = sig_letters(row, lv)
     if counts is not None:
         out["counts"] = counts
+    if row.get("members") is not None:
+        out["members"] = row["members"]
+        out["members_mode"] = row["members_mode"]
+        out["members_text"] = C.members_text(row["members"], row["members_mode"], limit=6)
+        out["members_full"] = C.members_text(row["members"], row["members_mode"])
     return out
 
 
@@ -102,8 +107,11 @@ def results_tables(ctx):
     out = []
     for t in ctx.tables:
         rows = []
+        nets_ = [r for r in t["rows"] if r.get("members") is not None]
         for r in t["rows"]:
             s = _serialize(r, ctx)
+            if r.get("code_idx") is not None:        # which summaries this answer belongs to (tags shown next to the answer)
+                s["in_nets"] = [n["label"] for n in nets_ if r["code_idx"] in n.get("member_idx", [])]
             s["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in DISPLAY}
             s["status"] = r.get("status", "")
             rows.append(s)

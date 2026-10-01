@@ -472,7 +472,7 @@ async function secNets() {
     tblHost.replaceChildren(h('table', null, h('thead', null, hdr), h('tbody', null, ...rows)));
     if (pv.nets.length) netHost.append(h('h2', { style: 'font-size:15px;margin:6px 0' }, 'תוצאות הסיכומים (חיות, אותה חישוביות כמו באקסל)'),
       h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'סיכום'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, LEVEL_HE[l] + ' (' + LETTER[l] + ')')))),
-        h('tbody', null, ...pv.nets.map(n => h('tr', { class: 'sum' }, h('td', null, n.label), h('td', null, n.united ? h('code', null, n.united) : h('span', { class: 'muted' }, 'חופשי')), ...LEVELS.map(l => valueCell(n, l, true))))))));
+        h('tbody', null, ...pv.nets.map(n => h('tr', { class: 'sum' }, h('td', null, n.label, n.members_text ? h('div', { class: 'members', title: n.members_full }, n.members_text) : null), h('td', null, n.united ? h('code', null, n.united) : h('span', { class: 'muted' }, 'חופשי')), ...LEVELS.map(l => valueCell(n, l, true))))))));
     if (pv.base_note === 'all') netHost.append(h('div', { class: 'muted' }, 'בסיס: כלל המדגם (שאלת המשך מותנית בחשיפה).'));
   }
   function valueCell(row, l, withCount) {
@@ -533,7 +533,7 @@ function renderTables(host, R, reload) {
     list.replaceChildren();
     R.tables.filter(t => (!onlyDict || t.dict_var) && (!q || (t.key + ' ' + t.title + ' ' + t.question + ' ' + (t.dict_var || '')).toLowerCase().includes(q))).forEach(t => {
       const sums = t.rows.filter(r => r.section === 'summary'), body = t.rows.filter(r => r.section !== 'summary');
-      const tr = r => h('tr', { class: r.section === 'summary' ? 'sum' : '' }, h('td', null, r.label, r.note ? h('div', { class: 'muted' }, r.note) : null), h('td', null, r.united ? h('code', null, r.united) : ''), ...LEVELS.map(l => cell(r, l)));
+      const tr = r => h('tr', { class: r.section === 'summary' ? 'sum' : '' }, h('td', null, r.label, r.members_text ? h('div', { class: 'members', title: r.members_full }, r.members_text) : null, r.in_nets && r.in_nets.length ? h('div', { class: 'assigned' }, '↳ ' + r.in_nets.join(' · ')) : null, r.note ? h('div', { class: 'muted' }, r.note) : null), h('td', null, r.united ? h('code', null, r.united) : ''), ...LEVELS.map(l => cell(r, l)));
       const conf = t.confidence ? h('span', { class: 'badge ' + t.confidence, style: 'margin-inline-start:8px' }, CONF_HE[t.confidence] || t.confidence) : null;
       list.append(h('details', { class: 'sec' }, h('summary', { title: t.question || t.title }, h('b', null, t.title), h('code', null, t.key), conf, t.question ? h('span', { class: 'qhint' }, t.question.slice(0, 70) + (t.question.length > 70 ? '…' : '')) : null, h('span', { class: 'pill' }, t.rows.length + ' שורות')),
         h('div', { class: 'body' }, h('div', { class: 'row', style: 'margin-bottom:6px' }, editable.has(t.key) ? h('button', { class: 'btn small ghost', onclick: () => editCounts(t.key) }, '✎ הגדר/ערוך סיכומי קודים (counts) לשאלה זו') : null, h('button', { class: 'btn small ghost', onclick: () => viewStep2() }, '← לסקירה (התאמת מילון / אישור)')), t.question ? h('p', { class: 'qtext' }, t.question) : null,
