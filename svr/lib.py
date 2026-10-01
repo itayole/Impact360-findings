@@ -71,28 +71,42 @@ def base_kind(base_text):
 # SAV
 # ----------------------------------------------------------------------------
 
+def _repair_labels(meta, m2):
+    """Hebrew Decipher exports: with the default cp1255 decode a VARIABLE label comes out with a stray first letter and
+    the last letter lost ('יvctq3c1: ... חשיפ'); the same bytes as iso-8859-8 are clean ('vctq3c1: ... חשיפה').
+    A label is replaced only when the iso-8859-8 reading has the clean Decipher shape 'name: ...' and the cp1255
+    reading does not, so files that are already fine (English, utf-8) are untouched."""
+    if m2.variable_value_labels:
+        meta.variable_value_labels = m2.variable_value_labels
+        meta.value_labels = getattr(m2, "value_labels", meta.value_labels)
+    iso = dict(zip(m2.column_names, m2.column_labels))
+    fixed = []
+    for n, lab in zip(meta.column_names, meta.column_labels):
+        alt = iso.get(n)
+        if alt and str(alt).startswith(n + ":") and not str(lab or "").startswith(n + ":"):
+            lab = alt
+        fixed.append(lab)
+    meta.column_labels = fixed
+    meta.column_names_to_labels = dict(zip(meta.column_names, fixed))
+
+
 def load_sav(path):
-    """Data + metadata.  SPSS value labels written by Hebrew Decipher exports come out scrambled with the
-    default cp1255 decode (a stray first letter, last letter lost); the same bytes read as iso-8859-8 are clean,
-    so value labels are re-read that way (variable labels are fine either way)."""
+    """Data + metadata, with the Hebrew label repair above."""
     df, meta = pyreadstat.read_sav(path)
     try:
         _, m2 = pyreadstat.read_sav(path, encoding="iso-8859-8", metadataonly=True)
-        if m2.variable_value_labels:
-            meta.variable_value_labels = m2.variable_value_labels
-            meta.value_labels = getattr(m2, "value_labels", meta.value_labels)
+        _repair_labels(meta, m2)
     except Exception:
         pass
     return df, meta
 
 
 def load_meta(path):
-    """Metadata only (fast) — same value-label repair as load_sav."""
+    """Metadata only (fast) — same repair as load_sav."""
     _, meta = pyreadstat.read_sav(path, metadataonly=True)
     try:
         _, m2 = pyreadstat.read_sav(path, encoding="iso-8859-8", metadataonly=True)
-        if m2.variable_value_labels:
-            meta.variable_value_labels = m2.variable_value_labels
+        _repair_labels(meta, m2)
     except Exception:
         pass
     return meta
