@@ -424,7 +424,7 @@ async function secNets() {
     tblHost.replaceChildren(h('table', null, h('thead', null, hdr), h('tbody', null, ...rows)));
     if (pv.nets.length) netHost.append(h('h2', { style: 'font-size:15px;margin:6px 0' }, 'תוצאות הסיכומים (חיות, אותה חישוביות כמו באקסל)'),
       h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'סיכום'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, LEVEL_HE[l] + ' (' + LETTER[l] + ')')))),
-        h('tbody', null, ...pv.nets.map(n => h('tr', { class: 'sum' }, h('td', null, n.label), h('td', null, n.united ? h('code', null, n.united) : h('span', { class: 'muted' }, 'חופשי')), ...LEVELS.map(l => valueCell(n, l, false))))))));
+        h('tbody', null, ...pv.nets.map(n => h('tr', { class: 'sum' }, h('td', null, n.label), h('td', null, n.united ? h('code', null, n.united) : h('span', { class: 'muted' }, 'חופשי')), ...LEVELS.map(l => valueCell(n, l, true))))))));
     if (pv.base_note === 'all') netHost.append(h('div', { class: 'muted' }, 'בסיס: כלל המדגם (שאלת המשך מותנית בחשיפה).'));
   }
   function valueCell(row, l, withCount) {

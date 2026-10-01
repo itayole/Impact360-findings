@@ -70,6 +70,7 @@ def test_full_flow(client):
     slog = next(n for n in pv["nets"] if n["united"] == "SLOGAN#01")
     assert round(slog["values"]["sample"], 1) == 24.9
     assert all(c["counts"] is not None for c in pv["codes"])
+    assert slog["counts"]["sample"] == round(24.9 * 406 / 100)      # net rows carry n like the answer rows
 
     j = client.post(f"/api/projects/{pid}/run").json()
     res = wait_job(client, j["job_id"])

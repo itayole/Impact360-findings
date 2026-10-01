@@ -54,7 +54,9 @@ def block_preview(ctx, entry, nets=None):
     code_iter = iter(e["vars"])
     for r in rows:
         if r["section"] == "summary":
-            out_nets.append(_serialize(r, ctx))
+            ns = _serialize(r, ctx)
+            ns["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in DISPLAY}
+            out_nets.append(ns)
         else:
             v = next(code_iter, None)
             counts = {lv: int((flags[v] & ctx.masks[lv]).sum()) for lv in DISPLAY} if v else None
