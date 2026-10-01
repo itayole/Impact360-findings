@@ -81,6 +81,9 @@ td[title], .tab[title], summary[title] { cursor: help; }
 .combo .opt.cur { background: #e8eefb; font-weight: 700; }
 .combo .opt.none { color: var(--amber); }
 .card.snap { padding: 10px 14px; background: #fbfcfe; }
+.state { font-size: 12px; font-weight: 700; margin-top: 3px; }
+.state.wait { color: var(--amber); }
+.state.ok { color: var(--green); }
 .foot { text-align: center; color: #6b7280; font-size: 12px; padding: 16px; border-top: 1px solid var(--line); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
 .kv b { color: var(--navy); }

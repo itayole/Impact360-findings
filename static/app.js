@@ -329,20 +329,19 @@ function secQuestions(M, R) {
         if ((v || '') === (e.dict_var || '')) return;
         try { await patch({ remap: { [e.key]: v } }); toast(`${e.key}: ${v || 'ללא משתנה מילון'}`); viewStep2(); } catch (err) { toast('⚠ ' + err.message); }
       });
-      const appr = e.needs_approval ? h('label', null, h('input', { type: 'checkbox', checked: !!e.confirmed, onchange: async ev => { await patch({ questions: { [e.key]: { confirmed: ev.target.checked } } }); viewStep2(); } }), ' אשר') : (e.dict_var ? h('span', { class: 'muted' }, 'מהימן') : null);
       const inc = h('label', null, h('input', { type: 'checkbox', checked: e.include !== false, onchange: async ev => { await patch({ questions: { [e.key]: { include: ev.target.checked } } }); viewStep2(); } }), ' רלוונטי');
       return h('tr', { class: (e.include === false ? 'off ' : '') + (e.needs_approval ? 'need' : '') },
         h('td', null, h('code', null, e.key)), h('td', { title: e.question || '' }, (e.question || '').slice(0, 90), (e.warnings || []).map(w => h('div', { class: 'muted' }, '⚠ ' + w))),
         h('td', null, e.type || ''), h('td', null, combo, e.dict_title ? h('div', { class: 'muted' }, e.dict_title) : null),
-        h('td', null, h('span', { class: 'badge ' + e.confidence }, CONF_HE[e.confidence] || e.confidence), e.qnr_item ? h('div', { class: 'muted' }, 'בשאלון: ' + e.qnr_item.tag) : null), h('td', null, appr), h('td', null, inc));
+        h('td', null, h('span', { class: 'badge ' + e.confidence }, CONF_HE[e.confidence] || e.confidence), e.needs_approval ? h('div', { class: 'state wait' }, 'ממתין לאישור') : (e.confirmed && e.dict_var && !['exact', 'alias', 'template', 'tag', 'manual'].includes(e.confidence) ? h('div', { class: 'state ok' }, 'אושר') : null), e.qnr_item ? h('div', { class: 'muted' }, 'בשאלון: ' + e.qnr_item.tag) : null), h('td', null, inc));
     });
-    box.append(h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בלוק', 'שאלה', 'סוג', 'משתנה מילון', 'ביטחון', 'אישור', 'כלול'].map(x => h('th', null, x)))), h('tbody', null, ...rows))));
+    box.append(h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בלוק', 'שאלה', 'סוג', 'משתנה מילון', 'ביטחון', 'רלוונטי לדוח'].map(x => h('th', null, x)))), h('tbody', null, ...rows))));
   }
   const filt = h('label', null, h('input', { type: 'checkbox', checked: onlyPending, onchange: e => { onlyPending = S.onlyPending = e.target.checked; render(); } }), ' הצג רק מה שדורש החלטה');
-  const all = h('button', { class: 'btn small', onclick: () => guarded(all, async () => { await patch({ confirm_all: true }); viewStep2(); }) }, 'אשר את כל ההתאמות המוצעות');
+  const all = h('button', { class: 'btn gold', onclick: () => guarded(all, async () => { await patch({ confirm_all: true }); viewStep2(); }) }, `✔ אישרתי את ההתאמות המוצעות (${pending})`);
   render();
   return sec('3. שאלות ומילון', pending ? `${pending} דורשות החלטה` : 'הכול מאושר', pending ? 'need' : 'okp',
-    h('p', { class: 'muted' }, 'התאמה שאינה exact/alias/תבנית היא הצעה בלבד: אינה נכנסת ל-DATA_לייבוא עד אישור. אפשר להחליף משתנה מילון ידנית: לחץ/י על השדה או על ▾, חפש/י ובחר/י מהרשימה. בלוק שאינו רלוונטי (אומניבוס זר) — בטל/י "כלול".'),
+    h('p', { class: 'muted' }, 'עבור על השורות: אם המשתנה המוצע לא מתאים, לחץ/י על השדה (או ▾) ובחר/י משתנה אחר או "ללא משתנה מילון" (הטבלה תופיע בדוח כניתוח בלבד). התאמות שאינן exact/alias/תבנית הן הצעות שממתינות: הן לא נכנסות ל-DATA_לייבוא עד שתלחץ/י על "אישרתי את ההתאמות המוצעות". "רלוונטי לדוח" מבוטל = הבלוק לא יופיע בדוח בכלל (למשל שאלות של לקוח אחר באומניבוס).'),
     h('div', { class: 'row', style: 'margin-bottom:8px' }, filt, pending ? all : null), box);
 }
 
