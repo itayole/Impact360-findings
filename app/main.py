@@ -69,7 +69,7 @@ async def bad_handler(request, exc):
 
 @app.exception_handler(KeyError)
 async def key_handler(request, exc):
-    return JSONResponse(status_code=404, content=dict(detail="לא נמצא"))
+    return JSONResponse(status_code=404, content=dict(detail="הפרויקט לא נמצא — ייתכן שנמחק. חזור/י לשלב 1 (פרויקט חדש / קיימים)"))
 
 
 @app.exception_handler(FileNotFoundError)

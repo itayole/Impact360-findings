@@ -31,6 +31,16 @@ class Bad(Exception):
     """User-facing 400."""
 
 
+def _mapping(store, pid):
+    """The project's mapping.  Missing project (e.g. deleted while a tab was still open) -> 404 with a clear message;
+    project without a profile run -> 400."""
+    store.project(pid)
+    m = store.mapping(pid)
+    if m is None:
+        raise Bad("עדיין לא הורץ זיהוי שאלות לפרויקט זה — חזור/י לשלב 1 והמשך מהעלאת הקובץ")
+    return m
+
+
 def build_info():
     return dict(app_version=APP_VERSION, build_time=config.BUILD_TIME)
 
@@ -105,7 +115,7 @@ def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id
 def review_payload(store, pid, mapping=None, df=None, meta=None):
     mapping = mapping or store.mapping(pid)
     if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+        raise Bad("עדיין לא הורץ זיהוי שאלות לפרויקט זה — חזור/י לשלב 1 והמשך מהעלאת הקובץ")
     if meta is None:
         df, meta = runtime.load_sav(store, pid)
     dpath = mapping["project"]["dictionary"]
@@ -140,9 +150,7 @@ def _log(mapping, user, key, what):
 
 def apply_patch(store, pid, patch, user=""):
     p = store.project(pid)
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     by = {e["key"]: e for e in mapping["questions"]}
     # ---- remap = a human picked the dictionary variable: rebuild the block around it
     remap = patch.get("remap") or {}
@@ -257,9 +265,7 @@ def apply_patch(store, pid, patch, user=""):
 
 # ------------------------------------------------------------------------------------------ preview / warnings
 def preview(store, pid, block=None, nets=None):
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     df, meta = runtime.load_sav(store, pid)
     vars_, codes = runtime.load_dictionary(mapping["project"]["dictionary"])
     ctx = C_ctx(df, meta, vars_, codes, mapping)
@@ -275,9 +281,7 @@ def preview(store, pid, block=None, nets=None):
 
 
 def warnings(store, pid):
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     df, meta = runtime.load_sav(store, pid)
     vars_, codes = runtime.load_dictionary(mapping["project"]["dictionary"])
     ctx = compute_results(df, meta, vars_, codes, mapping)
@@ -286,9 +290,7 @@ def warnings(store, pid):
 
 def results(store, pid):
     """Findings tables for on-screen verification (same numbers as the workbook)."""
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     df, meta = runtime.load_sav(store, pid)
     vars_, codes = runtime.load_dictionary(mapping["project"]["dictionary"])
     ctx = compute_results(df, meta, vars_, codes, mapping)
@@ -297,9 +299,7 @@ def results(store, pid):
 
 def coded_blocks(store, pid):
     """The blocks the Net Builder works on, with the dictionary nets each one is expected to feed."""
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     vars_, codes = runtime.load_dictionary(mapping["project"]["dictionary"])
     from svr.profile import FAMILY_NETS
     ulabel = {c["united"]: c["label"] for cl in codes.values() for c in cl if c["united"]}
@@ -330,9 +330,7 @@ def metrics_for(mapping):
 
 
 def start_run(store, pid, user=""):
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     p = store.project(pid)
     if not os.path.exists(store.sav_path(pid)):
         raise Bad("קובץ ה-SAV נמחק לפי מדיניות הניקוי — יש להעלות אותו מחדש")
@@ -401,9 +399,7 @@ def variable_values(store, pid, name):
 
 # ------------------------------------------------------------------------------------------ snapshots
 def save_snapshot(store, pid, name, user=""):
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     if not (name or "").strip():
         raise Bad("חסר שם")
     sid = store.save_snapshot(pid, name.strip(), mapping, user)
@@ -428,9 +424,7 @@ def load_snapshot(store, pid, sid, user=""):
 
 # ------------------------------------------------------------------------------------------ templates
 def save_template(store, pid, name, user="", client="", tracker="", template_id=None):
-    mapping = store.mapping(pid)
-    if mapping is None:
-        raise Bad("טרם הורץ פרופיל")
+    mapping = _mapping(store, pid)
     pend = [e["key"] for e in mapping["questions"] if e.get("include", True) and needs_approval(e)]
     if pend:
         raise Bad("לא ניתן לשמור תבנית עם התאמות שלא אושרו: " + ", ".join(pend[:8]))

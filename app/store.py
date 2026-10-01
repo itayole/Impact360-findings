@@ -177,6 +177,10 @@ class Store:
 
     def delete_project(self, pid):
         shutil.rmtree(self.pdir(pid), ignore_errors=True)
+        try:
+            os.rmdir(self.pdir(pid))        # OneDrive/AV can leave an empty folder behind
+        except OSError:
+            pass
         for p in (self.sav_path(pid), self.qnr_path(pid)):
             if os.path.exists(p):
                 os.remove(p)
