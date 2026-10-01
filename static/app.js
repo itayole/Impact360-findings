@@ -75,6 +75,7 @@ function backBar(prev, label) {
 }
 
 function setStep(n) {
+  if (S.flushNets) S.flushNets();   // never lose a pending Count Builder change when leaving the screen
   S.step = n;
   document.querySelectorAll('#steps li').forEach(li => {
     const k = +li.dataset.step;
@@ -373,6 +374,21 @@ async function secNets() {
   const blocks = S.catalog.slice().sort((a, b) => rank(a) - rank(b));
   if (!blocks.length) return sec('5. סיכומי קודים (Count Builder)', '', '', h('p', { class: 'muted' }, 'אין שאלות מקודדות/רב-ברירה בפרויקט.'));
   const localNets = {}; blocks.forEach(b => localNets[b.key] = JSON.parse(JSON.stringify(b.nets || {})));
+  /* autosave: every change is saved ~0.6s later; a summary with no code ticked yet (empty include) is kept locally only */
+  const validNets = n => { const o = {}; for (const k of Object.keys(n)) { if (n[k].include && !n[k].include.length) continue; o[k] = n[k]; } return o; };
+  const saved = {}; blocks.forEach(b => saved[b.key] = JSON.stringify(validNets(localNets[b.key])));
+  const dirty = new Set(); let saveTimer = null;
+  const statusEl = h('span', { class: 'savestate' }, 'שינויים נשמרים אוטומטית');
+  async function saveBlock(key) {
+    const payload = validNets(localNets[key]);
+    if (JSON.stringify(payload) === saved[key]) return;
+    statusEl.className = 'savestate'; statusEl.textContent = 'שומר…';
+    try { await patch({ questions: { [key]: { nets: payload } } }); saved[key] = JSON.stringify(payload); statusEl.className = 'savestate ok'; statusEl.textContent = '✓ נשמר'; }
+    catch (e) { statusEl.className = 'savestate err'; statusEl.textContent = '⚠ השמירה נכשלה: ' + e.message; dirty.add(key); }
+  }
+  async function flush() { clearTimeout(saveTimer); const keys = [...dirty]; dirty.clear(); for (const k of keys) await saveBlock(k); }
+  function scheduleSave(key) { dirty.add(key); statusEl.className = 'savestate'; statusEl.textContent = 'שומר…'; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 600); }
+  S.flushNets = flush;
   S.netBlock = S.netBlock && blocks.find(b => b.key === S.netBlock) ? S.netBlock : blocks[0].key;
   S.activeNet = null;
   let timer = null;
@@ -386,7 +402,7 @@ async function secNets() {
     box.replaceChildren();
     const b = blocks.find(x => x.key === S.netBlock);
     const nets = localNets[b.key];
-    const tabs = h('div', { class: 'tabs' }, ...blocks.map(x => h('span', { class: 'tab' + (x.key === b.key ? ' active' : ''), title: x.question || x.key, onclick: () => { S.netBlock = x.key; S.activeNet = null; render(); } },
+    const tabs = h('div', { class: 'tabs' }, ...blocks.map(x => h('span', { class: 'tab' + (x.key === b.key ? ' active' : ''), title: x.question || x.key, onclick: () => { flush(); S.netBlock = x.key; S.activeNet = null; render(); } },
       x.key, Object.keys(localNets[x.key]).length ? h('span', { class: 'dot' }) : null)));
     const defs = netDefs(b);
     if (!S.activeNet || !defs.find(d => d.key === S.activeNet)) S.activeNet = defs.length ? defs[0].key : null;
@@ -400,7 +416,7 @@ async function secNets() {
           ev.stopPropagation();
           if (!await askConfirm(`למחוק את הסיכום "${d.label}"?`)) return;
           delete nets[d.key]; if (S.activeNet === d.key) S.activeNet = null;
-          try { await patch({ questions: { [b.key]: { nets } } }); toast('הסיכום נמחק'); } catch (e) { toast('⚠ ' + e.message); }
+          try { await patch({ questions: { [b.key]: { nets: validNets(nets) } } }); saved[b.key] = JSON.stringify(validNets(nets)); toast('הסיכום נמחק'); } catch (e) { toast('⚠ ' + e.message); }
           render();
         } }, '✕') : null,
         h('div', { class: 't' }, d.label), h('div', { class: 'muted' }, d.dict ? d.key : 'סיכום בשם חופשי (לא מיובא ל-DATA)'),
@@ -416,9 +432,7 @@ async function secNets() {
     } else right.append(h('div', { class: 'alert warn' }, 'בחר/י סיכום מהרשימה משמאל כדי להגדיר אילו קודים נכללים בו.'));
     const tblHost = h('div', { class: 'tablewrap' }, 'טוען תוצאות…'); right.append(tblHost);
     const netHost = h('div', { style: 'margin-top:10px' }); right.append(netHost);
-    const saveBtn = h('button', { class: 'btn', style: 'margin-top:10px' }, 'שמור סיכומים לשאלה זו');
-    saveBtn.onclick = () => guarded(saveBtn, async () => { await patch({ questions: { [b.key]: { nets: localNets[b.key] } } }); toast('נשמר'); });
-    right.append(saveBtn);
+    right.append(h('div', { style: 'margin-top:10px' }, statusEl));
     box.append(tabs, h('div', { class: 'split' }, left, right));
 
     let pv;
@@ -439,11 +453,11 @@ async function secNets() {
     return h('td', { class: 'num' + (v != null && n < 30 ? ' low' : '') }, v == null ? '' : pctFmt(v, row.kind), row.letters[l] ? h('span', { class: 'sig' }, row.letters[l]) : null,
       withCount && row.counts ? h('div', { class: 'muted' }, 'n=' + row.counts[l]) : null);
   }
-  function change() { clearTimeout(timer); timer = setTimeout(render, 150); }
+  function change() { scheduleSave(S.netBlock); clearTimeout(timer); timer = setTimeout(render, 150); }
   render();
   const pending = blocks.filter(b => b.wanted.length && !Object.keys(b.nets || {}).length).length;
   return sec('5. סיכומי קודים (Count Builder)', pending ? `${pending} שאלות עם סיכומי מילון שטרם הוגדרו` : '', pending ? 'need' : '',
-    h('p', { class: 'muted' }, 'לכל שאלה מקודדת: סמן/י אילו קודים בונים כל סיכום מהמילון (SLOGAN#01, SPONTIMP_CORRECT, SEMIAEX-VD_* ועוד) או סיכום בשם חופשי. המערכת לא מנחשת את הסלוגן/המסר הנכון.'), box);
+    h('p', { class: 'muted' }, 'השינויים נשמרים אוטומטית. לכל שאלה מקודדת: סמן/י אילו קודים בונים כל סיכום מהמילון (SLOGAN#01, SPONTIMP_CORRECT, SEMIAEX-VD_* ועוד) או סיכום בשם חופשי. המערכת לא מנחשת את הסלוגן/המסר הנכון.'), box);
 }
 
 function secWarnings() {

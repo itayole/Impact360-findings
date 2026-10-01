@@ -145,7 +145,12 @@ def _slim_mapping(mapping, vars_):
 
 # ------------------------------------------------------------------------------------------ decisions
 def _log(mapping, user, key, what):
-    mapping.setdefault("decisions", []).append(dict(key=key, user=user or "anonymous", at=now(), what=what))
+    log_ = mapping.setdefault("decisions", [])
+    u = user or "anonymous"
+    if log_ and (log_[-1].get("key"), log_[-1].get("user"), log_[-1].get("what")) == (key, u, what):
+        log_[-1]["at"] = now()          # autosave fires often: keep one entry per burst of identical edits
+        return
+    log_.append(dict(key=key, user=u, at=now(), what=what))
 
 
 def apply_patch(store, pid, patch, user=""):
