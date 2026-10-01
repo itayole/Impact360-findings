@@ -2,7 +2,9 @@
 """svr_compute — turns (SAV + confirmed mapping.json + bench dictionary) into result tables.
 
 A *row* is one dictionary answer slot (united = VAR#SLOT) or an analysis-only line; it carries a value+base for
-each analysis level.  Levels:  sample | exposed | customers | noncust  (+ notexposed, used only for significance).
+each analysis level.  Fixed levels:  sample | exposed | expnonuser (exposed AND non-customer) | customers | noncust,
+plus any number of user-defined segments (extra columns, analysis only); each segment also gets a hidden ":rest" level
+(everyone outside it) that is only used for its significance test.
 """
 import re
 from collections import OrderedDict
@@ -13,10 +15,10 @@ from rapidfuzz import fuzz
 
 from . import lib as L
 
-LEVELS = ["sample", "exposed", "customers", "noncust"]
-ALL_LEVELS = LEVELS + ["notexposed"]
-LEVEL_HE = {"sample": "מדגם", "exposed": "נחשפים", "customers": "לקוחות", "noncust": "לא לקוחות",
-            "notexposed": "לא נחשפים"}
+LEVELS = ["sample", "exposed", "expnonuser", "customers", "noncust"]
+LEVEL_HE = {"sample": "מדגם", "exposed": "נחשפים", "expnonuser": "נחשפים שאינם משתמשים", "customers": "לקוחות",
+            "noncust": "לא לקוחות"}
+MAX_SEGMENTS = 12
 DIGITAL_RECS = {"RECVDG", "RECVSO", "RECIMB", "RECIMF", "RECINF"}
 NEXT_ACTION_TIERS = {1: 100, 2: 70, 3: 40, 4: 0, 5: 0}
 TRUSTED = ("manual", "exact", "tag", "template", "alias")   # matches allowed into `united` without a human decision
@@ -69,7 +71,6 @@ class Ctx:
             expo |= m
             used.append(c)
         self.masks["exposed"] = expo
-        self.masks["notexposed"] = ~expo
         self.expo_components = used
         vv = ex.get("verify_var")
         if vv and vv in df:
@@ -91,18 +92,39 @@ class Ctx:
             self.masks["customers"] = np.zeros(self.n, bool)
             self.masks["noncust"] = np.zeros(self.n, bool)
             self.checks.append(("לקוחות/לא לקוחות", "לא הוגדר משתנה שימוש — העמודות ריקות", "שים לב"))
+        # exposed non-users = exposure x non-customers (the exposed base is skewed towards brand users)
+        self.masks["expnonuser"] = self.masks["exposed"] & self.masks["noncust"]
+        self._build_segments()
+
+    def _build_segments(self):
+        """User-defined extra columns (demographics / sub-audiences): variable + values -> mask, plus its hidden rest."""
+        self.display = list(LEVELS)
+        self.names = dict(LEVEL_HE)
+        self.partner = {"customers": "noncust", "noncust": "customers"}
+        for sg in (self.map.get("segments") or [])[:MAX_SEGMENTS]:
+            var = sg.get("var")
+            if var not in self.df.columns:
+                self.checks.append((f"חיתוך '{sg.get('name')}'", f"המשתנה {var} לא קיים בקובץ — העמודה לא הופקה", "בדוק"))
+                continue
+            key = f"seg:{sg['id']}"
+            m = self.df[var].isin(sg.get("values", [])).values
+            self.masks[key], self.masks[key + ":rest"] = m, ~m
+            self.display.append(key)
+            self.names[key] = sg.get("name") or var
+            self.partner[key] = key + ":rest"
+            self.checks.append((f"חיתוך נוסף: {self.names[key]} ({var})", f"N={int(m.sum())} | שאר המדגם={int((~m).sum())}",
+                                "OK" if m.sum() >= 30 else "שים לב: בסיס נמוך"))
+        self.all_levels = self.display + [k + ":rest" for k in self.display if k.startswith("seg:")]
+        self.letter = {lv: chr(65 + i) for i, lv in enumerate(self.display)}
 
     def bases(self):
-        out = {}
-        for k in ALL_LEVELS:
-            out[k] = int(self.masks[k].sum())
-        return out
+        return {k: int(self.masks[k].sum()) for k in self.all_levels}
 
     # ---------------------------------------------------------------- helpers
     def per_level(self, fn):
         """fn(mask) -> (value, n[, sd])"""
         out = {}
-        for k in ALL_LEVELS:
+        for k in self.all_levels:
             r = fn(self.masks[k])
             out[k] = r if len(r) == 3 else (r[0], r[1], None)
         return out
@@ -170,7 +192,7 @@ def do_categorical(ctx, e):
             rows.append(ctx.row(None, 0, lab, ctx.pct(cond, valid), section="analysis", united=""))
     for s, c in slots.items():   # dictionary answer slots with no SAV option
         if c["role"] in ("scale", "item") and s not in seen and dv and not (dv == "MAIN MESSAGE_TAKEOUT" and s in (1, 6)):
-            rows.append(ctx.row(dv, s, c["label"], {k: (None, 0, None) for k in ALL_LEVELS}, note="לא נשאל בשאלון (אין אפשרות תשובה תואמת ב-SAV)"))
+            rows.append(ctx.row(dv, s, c["label"], {k: (None, 0, None) for k in ctx.all_levels}, note="לא נשאל בשאלון (אין אפשרות תשובה תואמת ב-SAV)"))
     # summary slots
     if dv:
         summ = [
@@ -201,11 +223,11 @@ def do_categorical(ctx, e):
         by = {r["slot"]: r for r in rows if r["united"]}
         if 2 in by:
             rows.append(ctx.row(dv, 1, "מסר עיקרי מנחשפים",
-                                {k: (by[2]["vals"]["exposed"] if k == "sample" else by[2]["vals"][k]) for k in ALL_LEVELS},
+                                {k: (by[2]["vals"]["exposed"] if k == "sample" else by[2]["vals"][k]) for k in ctx.all_levels},
                                 section="summary", export="exposed", note="= #02 בקרב הנחשפים; ל-DATA נלקח מעמודת הנחשפים"))
         firsts = [by[s] for s in (2, 3, 4) if s in by]
         if firsts:
-            mx = {k: (max((r["vals"][k][0] or 0) for r in firsts), firsts[0]["vals"][k][1], None) for k in ALL_LEVELS}
+            mx = {k: (max((r["vals"][k][0] or 0) for r in firsts), firsts[0]["vals"][k][1], None) for k in ctx.all_levels}
             rows.append(ctx.row(dv, 6, "שיעור המסר הגבוה ביותר בציון ראשון", mx, section="summary", note="MAX על #02-#04"))
     return rows
 
@@ -296,7 +318,7 @@ def do_message_takeout(ctx, e):
         rows.append(ctx.row(dv, s, (slots.get(s) or {}).get("label", f"מסר {s}"), ctx.pct(cond, asked)))
     if 5 in slots:
         vals = {}
-        for k in ALL_LEVELS:
+        for k in ctx.all_levels:
             best = 0.0; n0 = 0
             for s in (1, 2, 3):
                 v, n = L.wpct(per_slot[s], asked & ctx.masks[k], ctx.w)
@@ -392,7 +414,7 @@ def twin_rows(ctx, tables):
             c = ctx.item_codes(tw).get(r["slot"])
             if not c:
                 continue
-            vals = {k: (r["vals"]["exposed"] if k == "sample" else r["vals"][k]) for k in ALL_LEVELS + ["notexposed"]}
+            vals = {k: (r["vals"]["exposed"] if k == "sample" else r["vals"][k]) for k in ctx.all_levels}
             rows.append(ctx.row(tw, r["slot"], c["label"] + " — בקרב הנחשפים", vals, section="summary", export="exposed",
                                 note="תאום בסיס-נחשפים (אבחוני בלבד); ל-DATA נלקח מעמודת הנחשפים"))
     if not rows:

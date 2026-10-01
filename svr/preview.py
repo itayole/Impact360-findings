@@ -10,17 +10,17 @@ import numpy as np
 
 from . import compute as C
 from . import lib as L
-from .report import DISPLAY, LETTER, MIN_N, sig_letters
+from .report import MIN_N, sig_letters
 
 
 def _serialize(row, ctx, counts=None):
     out = dict(label=row["label"], united=row["united"], section=row["section"], kind=row["kind"], note=row["note"],
                values={}, letters={}, n={})
-    for lv in DISPLAY:
+    for lv in ctx.display:
         v = row["vals"][lv]
         out["values"][lv] = None if v[0] is None else round(v[0], 3)
         out["n"][lv] = v[1]
-        out["letters"][lv] = sig_letters(row, lv)
+        out["letters"][lv] = sig_letters(row, lv, ctx)
     if counts is not None:
         out["counts"] = counts
     if row.get("members") is not None:
@@ -33,12 +33,18 @@ def _serialize(row, ctx, counts=None):
 
 def bases(ctx):
     b = ctx.bases()
-    return {k: b[k] for k in DISPLAY}
+    return {k: b[k] for k in ctx.display}
+
+
+def columns(ctx):
+    """The displayed columns, in order: the UI renders its tables from this (fixed levels + user segments)."""
+    b = ctx.bases()
+    return [dict(key=k, letter=ctx.letter[k], name=ctx.names[k], n=b[k], segment=k.startswith("seg:")) for k in ctx.display]
 
 
 def level_summary(ctx):
     """Bases + the automatic checks that concern the level definitions (exposure union vs DP variable, customers)."""
-    return dict(bases=bases(ctx), checks=[list(c) for c in ctx.checks[:3]])
+    return dict(bases=bases(ctx), columns=columns(ctx), checks=[list(c) for c in ctx.checks[:3]])
 
 
 def block_preview(ctx, entry, nets=None):
@@ -60,16 +66,16 @@ def block_preview(ctx, entry, nets=None):
     for r in rows:
         if r["section"] == "summary":
             ns = _serialize(r, ctx)
-            ns["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in DISPLAY}
+            ns["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in ctx.display}
             out_nets.append(ns)
         else:
             v = next(code_iter, None)
-            counts = {lv: int((flags[v] & ctx.masks[lv]).sum()) for lv in DISPLAY} if v else None
+            counts = {lv: int((flags[v] & ctx.masks[lv]).sum()) for lv in ctx.display} if v else None
             s = _serialize(r, ctx, counts)
             s["var"] = v
             out_codes.append(s)
     return dict(key=e["key"], codes=out_codes, nets=out_nets, bases=bases(ctx),
-                base_note="all" if e.get("base") == "all" else "asked", letters=LETTER, min_n=MIN_N)
+                base_note="all" if e.get("base") == "all" else "asked", letters=ctx.letter, columns=columns(ctx), min_n=MIN_N)
 
 
 def project_warnings(ctx, mapping):
@@ -112,9 +118,9 @@ def results_tables(ctx):
             s = _serialize(r, ctx)
             if r.get("code_idx") is not None:        # which summaries this answer belongs to (tags shown next to the answer)
                 s["in_nets"] = [n["label"] for n in nets_ if r["code_idx"] in n.get("member_idx", [])]
-            s["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in DISPLAY}
+            s["counts"] = {lv: _count(r["vals"][lv][0], r["vals"][lv][1], r["kind"]) for lv in ctx.display}
             s["status"] = r.get("status", "")
             rows.append(s)
         out.append(dict(key=t["key"], title=t["title"], question=t.get("question", ""), dict_var=t.get("dict_var"),
                         type=t.get("type"), confidence=t.get("confidence", ""), notes=t.get("notes", []), rows=rows))
-    return dict(bases=bases(ctx), letters=LETTER, min_n=MIN_N, tables=out)
+    return dict(bases=bases(ctx), letters=ctx.letter, columns=columns(ctx), min_n=MIN_N, tables=out)

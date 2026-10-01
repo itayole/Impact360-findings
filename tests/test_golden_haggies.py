@@ -18,7 +18,8 @@ def test_levels(golden):
     assert b["sample"] == 406
     assert b["exposed"] == 217
     assert b["customers"] == 246 and b["noncust"] == 160
-    assert b["notexposed"] == 189
+    assert b["expnonuser"] == 74                 # exposed AND non-customers (replaces the old not-exposed column)
+    assert "notexposed" not in b
 
 
 def test_exposure_union_equals_dp_variable(golden):

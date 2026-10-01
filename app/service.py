@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import re
+import uuid
 import shutil
 import time
 
@@ -15,7 +16,7 @@ from svr import questionnaire as Q
 from svr import templates as T
 from svr.profile import brand_options, profile as run_profile_fn, needs_approval
 from svr.report import compute_results, render_xlsx, summary_counts, open_assumptions
-from svr.compute import TRUSTED
+from svr.compute import TRUSTED, MAX_SEGMENTS
 
 import logging
 
@@ -231,6 +232,34 @@ def apply_patch(store, pid, patch, user=""):
         cu["review"] = "נבחר על ידי המשתמש"
         mapping["customer"] = cu
         _log(mapping, user, "customer", f"מותג נבדק (לקוחות): {opts[cv]['text']}")
+    if patch.get("segment_add"):
+        d = patch["segment_add"]
+        df, meta = runtime.load_sav(store, pid)
+        var, vals, name = d.get("var"), d.get("values") or [], (d.get("name") or "").strip()
+        if not name:
+            raise Bad("יש לתת שם לחיתוך")
+        if var not in df.columns:
+            raise Bad("המשתנה לא קיים בקובץ ה-SAV")
+        if not vals:
+            raise Bad("יש לסמן לפחות ערך אחד")
+        present = {float(x) for x in df[var].dropna().unique()}
+        vals = [float(v) for v in vals]
+        if any(v not in present for v in vals):
+            raise Bad("אחד הערכים שנבחרו לא קיים במשתנה")
+        segs = mapping.setdefault("segments", [])
+        if len(segs) >= MAX_SEGMENTS:
+            raise Bad(f"ניתן להגדיר עד {MAX_SEGMENTS} חיתוכים נוספים")
+        vl = (meta.variable_value_labels or {}).get(var) or {}
+        labs = [re.sub(r"\[[^\]]*\]", "", str(vl.get(v, vl.get(int(v), v)))).strip() for v in vals]
+        segs.append(dict(id=uuid.uuid4().hex[:6], name=name[:60], var=var, values=vals, desc=f"{var} ∈ {{{', '.join(labs)}}}"))
+        _log(mapping, user, "segments", f"נוסף חיתוך '{name}': {var} ∈ {', '.join(labs)}")
+    if patch.get("segment_remove"):
+        before = mapping.get("segments") or []
+        gone = [s_ for s_ in before if s_["id"] == patch["segment_remove"]]
+        if not gone:
+            raise Bad("החיתוך לא קיים")
+        mapping["segments"] = [s_ for s_ in before if s_["id"] != patch["segment_remove"]]
+        _log(mapping, user, "segments", f"הוסר החיתוך '{gone[0]['name']}'")
     if patch.get("customer_def"):
         d = patch["customer_def"]
         df, meta = runtime.load_sav(store, pid)

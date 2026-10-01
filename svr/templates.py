@@ -218,6 +218,8 @@ def apply_template(mapping, template):
     for part in ("exposure", "customer"):
         if tm.get(part) is not None:
             mapping[part] = copy.deepcopy(tm[part])
+    if tm.get("segments") is not None:
+        mapping["segments"] = copy.deepcopy(tm["segments"])      # extra columns travel with the tracker
     mapping["project"]["weight_var"] = tm.get("project", {}).get("weight_var") or mapping["project"].get("weight_var")
     diff = dict(applied=applied, missing=sorted(set(tq) - seen), new=new_blocks, structure_changed=changed_structure,
                 template=dict(id=template["id"], name=template["name"], version=template["version"]))

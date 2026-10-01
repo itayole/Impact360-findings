@@ -37,26 +37,23 @@ RIGHT = Alignment(horizontal="right", vertical="center", wrap_text=True, reading
 MIN_N = 30
 
 
-DISPLAY = ["sample", "exposed", "notexposed", "customers", "noncust"]      # column order -> letters A..E
-LETTER = {lv: chr(65 + i) for i, lv in enumerate(DISPLAY)}
-PARTNER = {"exposed": "notexposed", "notexposed": "exposed", "customers": "noncust", "noncust": "customers"}
-NCOL = 3 + 2 * len(DISPLAY)          # label, united, 5 x (value, letters), note
-
-
-def sig_letters(row, lvl):
-    """Letters of the column(s) this column is significantly HIGHER than: CAPITAL = 95%, small = 90%.
-    Pairs: B(exposed) vs C(not exposed), D(customers) vs E(non-customers). Base >= 30 in both."""
-    ref = PARTNER.get(lvl)
+def sig_letters(row, lvl, ctx):
+    """Fixed pair D(customers) vs E(non-customers): the letter of the column this one is significantly HIGHER than
+    (CAPITAL = 95%, small = 90%).  Extra segments are tested against everyone outside the segment: ▲/△ = higher than the
+    rest (95% / 90%), ▼/▽ = lower.  Exposed columns (B, C) have no pair: C is a subset of B.  Base >= 30 in both."""
+    ref = ctx.partner.get(lvl)
     if not ref:
         return ""
     a, b = row["vals"][lvl], row["vals"][ref]
     if a[0] is None or b[0] is None:
         return ""
     z = L.z_prop(a[0], a[1], b[0], b[1], MIN_N) if row["kind"] == "pct" else L.z_mean(a[0], a[2], a[1], b[0], b[2], b[1], MIN_N)
+    if ref.endswith(":rest"):
+        return "▲" if z > 1.96 else ("△" if z > 1.645 else ("▼" if z < -1.96 else ("▽" if z < -1.645 else "")))
     if z > 1.96:
-        return LETTER[ref]
+        return ctx.letter[ref]
     if z > 1.645:
-        return LETTER[ref].lower()
+        return ctx.letter[ref].lower()
     return ""
 
 
@@ -73,6 +70,8 @@ def style_hdr(ws, r, c1, c2, fill=FILL_NAVY):
 # --------------------------------------------------------------------------- sheets
 def sheet_findings(wb, ctx):
     ws = wb.create_sheet("ממצאים")
+    DISPLAY, LETTER = ctx.display, ctx.letter
+    NCOL = 3 + 2 * len(DISPLAY)          # label, united, N x (value, letters), note
     ws.sheet_view.rightToLeft = True
     ws.sheet_view.showGridLines = False
     widths = [46, 30] + [9, 5] * len(DISPLAY) + [44]
@@ -88,8 +87,9 @@ def sheet_findings(wb, ctx):
     ws.cell(r, 1, f"ממצאי סקר אפקטיביות — {ctx.map['project'].get('name') or ctx.map['project'].get('brand') or ''} "
                   f"| {ctx.map['project'].get('campaign_id', '')} | SAV: {ctx.map['project'].get('sav', '')}").font = Font(name="Assistant", bold=True, size=14, color=NAVY)
     r += 1
-    ws.cell(r, 1, "מובהקות: אות = העמודה שמולה הערך מובהק גבוה יותר. אות גדולה = 95%, אות קטנה = 90%. השוואות: B מול C (נחשפים / לא נחשפים), "
-                  "D מול E (לקוחות / לא לקוחות); בסיס ≥30. משתנים מסכמים (T2B/TOP/נטו/אינדקסים) בראש כל טבלה, על רקע זהב.").font = F_NOTE
+    ws.cell(r, 1, "מובהקות: אות = העמודה שמולה הערך מובהק גבוה יותר. אות גדולה = רמת ביטחון של 95 אחוז, אות קטנה = רמת ביטחון של 90 אחוז. השוואה: D מול E (לקוחות / לא לקוחות); "
+                  "עמודת חיתוך נוסף מושווית אל כל מי שמחוץ לחיתוך (▲▼ = גבוה/נמוך מהשאר); בעמודות B ו-C אין מבחן (C היא חלק מ-B). בסיס ≥30. "
+                  "משתנים מסכמים (T2B/TOP/נטו/אינדקסים) בראש כל טבלה, על רקע זהב.").font = F_NOTE
     r += 2
     last = NCOL
     for t in ctx.tables:
@@ -115,7 +115,7 @@ def sheet_findings(wb, ctx):
         r += 1
         hdr = ["תשובה", "קוד (united)"]
         for lv in DISPLAY:
-            hdr += [C.LEVEL_HE[lv], ""]
+            hdr += [ctx.names[lv], ""]
         hdr += ["הערה"]
         for i, h in enumerate(hdr, 1):
             ws.cell(r, i, h)
@@ -154,7 +154,7 @@ def sheet_findings(wb, ctx):
                     c.alignment = CENTER
                     if v[0] is not None and v[1] < MIN_N:
                         c.font = Font(name="Assistant", size=10, color="C00000", italic=True)   # low base
-                    ws.cell(r, 4 + 2 * k, sig_letters(x, lv)).alignment = CENTER
+                    ws.cell(r, 4 + 2 * k, sig_letters(x, lv, ctx)).alignment = CENTER
                 note = x["note"]
                 if x.get("members") is not None:
                     note = (note + " | " if note else "") + C.members_text(x["members"], x["members_mode"])
@@ -189,8 +189,8 @@ def sheet_summary(wb, ctx):
     ws = wb.create_sheet("משתנים מסכמים")
     ws.sheet_view.rightToLeft = True
     hdr = ["united", "VAR_NAME", "סלוט", "תווית (מילון)", "תפקיד"]
-    for lv in C.LEVELS:
-        hdr += [C.LEVEL_HE[lv], f"n {C.LEVEL_HE[lv]}"]
+    for lv in ctx.display:
+        hdr += [ctx.names[lv], f"n {ctx.names[lv]}"]
     hdr += ["בסיס ל-DATA", "סטטוס מילון", "הערה"]
     ws.append(hdr)
     style_hdr(ws, 1, 1, len(hdr))
@@ -200,18 +200,18 @@ def sheet_summary(wb, ctx):
             if not x["united"]:
                 continue
             line = [x["united"], x["var"], x["slot"], x["canon"] or x["label"], x["role"]]
-            for lv in C.LEVELS:
+            for lv in ctx.display:
                 v = x["vals"][lv]
                 line += [None if v[0] is None else round(v[0], 3), v[1]]
-            line += [C.LEVEL_HE.get(x["export"], x["export"]), x["status"], x["note"]]
+            line += [ctx.names.get(x["export"], x["export"]), x["status"], x["note"]]
             ws.append(line)
             rr = ws.max_row
-            for k in range(4):
+            for k in range(len(ctx.display)):
                 ws.cell(rr, 6 + 2 * k).number_format = fmt_for(x)
             if x["status"] == "Don't import":
                 for i in range(1, len(line) + 1):
                     ws.cell(rr, i).fill = FILL_GREY
-    for i, w in enumerate([26, 24, 7, 44, 10] + [10, 8] * 4 + [12, 14, 60], 1):
+    for i, w in enumerate([26, 24, 7, 44, 10] + [10, 8] * len(ctx.display) + [12, 14, 60], 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     return ws
 
@@ -237,7 +237,7 @@ def sheet_data(wb, ctx):
             if v[0] is None:
                 continue
             val = round(v[0], 2) if x["kind"] == "mean" else round(v[0], 1)
-            ws.append([cid, x["var"], x["canon"] or x["label"], val, x["united"], "", C.LEVEL_HE[x["export"]], v[1], x["note"][:120]])
+            ws.append([cid, x["var"], x["canon"] or x["label"], val, x["united"], "", ctx.names[x["export"]], v[1], x["note"][:120]])
     ws.freeze_panes = "A2"
     for i, w in enumerate([16, 26, 44, 10, 26, 3, 10, 6, 60], 1):
         ws.column_dimensions[get_column_letter(i)].width = w
@@ -364,8 +364,10 @@ def sheet_readme(wb, ctx):
         ("רמות הניתוח", True),
         (f"מדגם: N={b['sample']}", False),
         (f"נחשפים לפחות למדיה אחת (Total Exposed = איחוד ערוצי המדיה): N={b['exposed']}", False),
-        (f"לקוחות (קנו את המותג בשלושת החודשים האחרונים): N={b['customers']}", False),
-        (f"לא לקוחות: N={b['noncust']}", False),
+        (f"נחשפים שאינם משתמשים (נחשפים שלא סימנו את המותג הנבדק; כי בקרב הנחשפים יש הטיה לטובת משתמשי המותג): N={b['expnonuser']}", False),
+        (f"לקוחות (הערכים שהוגדרו כלקוח, בדרך כלל קנו את המותג בשלושת החודשים האחרונים): N={b['customers']}", False),
+        (f"לא לקוחות (כל השאר, כולל ריקים): N={b['noncust']}", False),
+        *[(f"חיתוך נוסף ({ctx.names[k]}): N={b[k]} — לניתוח בלבד, לא מיובא ל-DATA_לייבוא", False) for k in ctx.display if k.startswith("seg:")],
         ("", False),
         ("איך קוראים את הקובץ", True),
         ("ממצאים — טבלה לכל שאלה; עמודות = 4 הרמות; בתחתית כל טבלה 'משתנים מסכמים' (T2B, TOP, נטו, אינדקסים) על רקע זהב.", False),

@@ -2,9 +2,15 @@
    The browser never computes methodology: every number shown comes from the server (preview = same code as the workbook). */
 'use strict';
 
-const LEVELS = ['sample', 'exposed', 'notexposed', 'customers', 'noncust'];
-const LEVEL_HE = { sample: 'מדגם', exposed: 'נחשפים', notexposed: 'לא נחשפים', customers: 'לקוחות', noncust: 'לא לקוחות' };
-const LETTER = { sample: 'A', exposed: 'B', notexposed: 'C', customers: 'D', noncust: 'E' };
+/* The displayed columns come from the server (fixed levels + user-defined segments): these three are updated in place by setCols(). */
+const LEVELS = ['sample', 'exposed', 'expnonuser', 'customers', 'noncust'];
+const LEVEL_HE = { sample: 'מדגם', exposed: 'נחשפים', expnonuser: 'נחשפים שאינם משתמשים', customers: 'לקוחות', noncust: 'לא לקוחות' };
+const LETTER = { sample: 'A', exposed: 'B', expnonuser: 'C', customers: 'D', noncust: 'E' };
+function setCols(cols) {
+  LEVELS.splice(0, LEVELS.length, ...cols.map(c => c.key));
+  Object.keys(LEVEL_HE).forEach(k => delete LEVEL_HE[k]); Object.keys(LETTER).forEach(k => delete LETTER[k]);
+  cols.forEach(c => { LEVEL_HE[c.key] = c.name; LETTER[c.key] = c.letter; });
+}
 const ROLE_HE = { '': '— לא מסר בריף —', main: 'מסר ראשי', sec1: 'משני 1', sec2: 'משני 2', buy: 'קנייה / ניסיון' };
 const CONF_HE = { exact: 'exact', alias: 'alias', template: 'תבנית', tag: 'תג', manual: 'ידני', structure: 'מבנה', keyword: 'keyword', 'fuzzy-high': 'fuzzy', 'fuzzy-low': 'fuzzy', none: 'ללא' };
 
@@ -33,10 +39,12 @@ async function api(path, opts = {}) {
   const o = { method: 'GET', headers: { 'X-User': encodeURIComponent(user() || 'anonymous') }, ...opts };
   if (opts.json !== undefined) { o.method = opts.method || 'POST'; o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opts.json); }
   let r;
-  try { r = await fetch('/api' + path, o); } catch (e) { throw new Error('אין חיבור לשרת — ודא/י שהאפליקציה רצה ורענן/י את הדף'); }
+  try { r = await fetch('api' + path, o); } catch (e) { throw new Error('אין חיבור לשרת — ודא/י שהאפליקציה רצה ורענן/י את הדף'); }
   let data = null;
   try { data = await r.json(); } catch (e) { /* not json */ }
   if (!r.ok) throw new Error((data && data.detail) || ('שגיאה ' + r.status));
+  const cols = data && (data.columns || (data.levels && data.levels.columns));
+  if (Array.isArray(cols)) setCols(cols);
   return data;
 }
 const pctFmt = (v, kind) => v == null ? '' : (kind === 'mean' ? v.toFixed(2) : v.toFixed(1));
@@ -113,7 +121,7 @@ async function viewStep1() {
     if (!state.sav) throw new Error('בחר/י קובץ SAV');
     const fd = new FormData();
     fd.append('sav', state.sav); if (qnrInput.files[0]) fd.append('qnr', qnrInput.files[0]); fd.append('name', nameIn.value);
-    const r = await fetch('/api/projects', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
+    const r = await fetch('api/projects', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
     const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'שגיאה');
     state.created = d; renderNext(d);
   });
@@ -193,7 +201,7 @@ async function viewStep2() {
       d.structure_changed.length ? `שינוי מבנה: ${d.structure_changed.join(', ')}.` : ''));
   }
   if (S.jumpTo) { const j = S.jumpTo; S.jumpTo = null; S.pendingJump = j; }
-  main.append(snapshotBar(), secExposure(M, R), secCustomers(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
+  main.append(snapshotBar(), secExposure(M, R), secCustomers(M, R), secSegments(M, R), secQuestions(M, R), secMessages(M, R), await secNets(), secWarnings(), secResults(false));
   if (S.pendingJump) { const j = S.pendingJump; S.pendingJump = null; setTimeout(() => { const el = $('#sec-5'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 400); }
   const next = h('button', { class: 'btn gold' }, 'המשך להרצה ←');
   next.onclick = () => viewStep3();
@@ -233,6 +241,48 @@ function snapshotBar() {
 
 function levelBases(R) { const b = R.levels.bases; return LEVELS.map(l => `${LEVEL_HE[l]}: ${b[l]}`).join(' · '); }
 
+function secSegments(M, R) {
+  const segs = M.segments || [];
+  const colOf = id => (R.levels.columns || []).find(c => c.key === 'seg:' + id);
+  const rows = segs.map(s => { const c = colOf(s.id); return h('tr', null, h('td', null, c ? c.letter : ''), h('td', null, s.name), h('td', null, h('code', null, s.desc || s.var)),
+    h('td', { class: 'num' }, c ? c.n : ''), h('td', null, h('button', { class: 'btn small ghost', title: 'הסר חיתוך', onclick: async () => {
+      if (!await askConfirm(`להסיר את החיתוך "${s.name}"?`)) return;
+      try { await patch({ segment_remove: s.id }); viewStep2(); } catch (e) { toast('⚠ ' + e.message); }
+    } }, '✕'))); });
+  return sec('2ב. חיתוכים נוספים (עמודות לתתי-קהלים / דמוגרפיה)', segs.length ? `${segs.length} חיתוכים` : 'אין', '',
+    h('p', { class: 'muted' }, 'כל חיתוך הוא עמודה נוספת בטבלאות ובאקסל (אחרי E), המחושבת מכלל המדגם לפי משתנה וערכים שתבחר/י (למשל "נשים 25-34"). המובהקות היא מול כל מי שמחוץ לחיתוך (▲ גבוה / ▼ נמוך). לניתוח בלבד: לא נכנס ל-DATA_לייבוא ולתאומי _E.'),
+    segs.length ? h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['עמודה', 'שם', 'הגדרה', 'N', ''].map(x => h('th', null, x)))), h('tbody', null, ...rows))) : null,
+    h('div', { style: 'margin-top:8px' }, h('button', { class: 'btn small', onclick: () => openSegmentDialog() }, '+ הוסף חיתוך')));
+}
+
+function openSegmentDialog() {
+  const name = h('input', { type: 'text', placeholder: 'למשל: נשים 25-34', style: 'width:100%' });
+  const valsHost = h('div', { class: 'tablewrap', style: 'margin-top:8px;max-height:260px' }, h('span', { class: 'muted' }, 'בחר/י משתנה כדי לראות את הערכים שלו.'));
+  let chosenVar = '', chosen = new Set();
+  const ov = h('div', { class: 'overlay' });
+  const close = () => ov.remove();
+  async function showValues() {
+    valsHost.textContent = 'טוען…';
+    try {
+      const d = await api(`/projects/${S.project.id}/variables/${encodeURIComponent(chosenVar)}`);
+      valsHost.replaceChildren(h('table', null, h('thead', null, h('tr', null, ...['בחר', 'ערך', 'תווית', 'n', '%'].map(x => h('th', null, x)))),
+        h('tbody', null, ...d.values.map(v => h('tr', null, h('td', null, h('input', { type: 'checkbox', onchange: e => { e.target.checked ? chosen.add(v.value) : chosen.delete(v.value); } })),
+          h('td', { class: 'num' }, String(v.value)), h('td', null, v.label || ''), h('td', { class: 'num' }, v.n), h('td', { class: 'num' }, (100 * v.n / d.n).toFixed(1)))))));
+    } catch (e) { valsHost.textContent = '⚠ ' + e.message; }
+  }
+  const picker = comboDict('', v => { if (!v) return; chosenVar = v; chosen = new Set(); showValues(); }, async () => api(`/projects/${S.project.id}/variables`), '(בחר/י משתנה)', false);
+  const add = h('button', { class: 'btn' }, 'הוסף חיתוך');
+  add.onclick = () => guarded(add, async () => {
+    if (!name.value.trim()) throw new Error('יש לתת שם לחיתוך');
+    if (!chosenVar || !chosen.size) throw new Error('יש לבחור משתנה ולסמן ערך אחד לפחות');
+    await patch({ segment_add: { name: name.value.trim(), var: chosenVar, values: [...chosen] } }); close(); viewStep2();
+  });
+  ov.append(h('div', { class: 'dlg', style: 'width:min(640px,94vw)' }, h('div', { style: 'font-weight:700;margin-bottom:8px' }, 'חיתוך נוסף (עמודה חדשה)'),
+    h('label', { class: 'f' }, 'שם העמודה', name), h('label', { class: 'f', style: 'margin-top:8px' }, 'משתנה', picker), valsHost,
+    h('div', { class: 'row', style: 'margin-top:10px' }, add, h('button', { class: 'btn ghost', onclick: close }, 'ביטול'))));
+  document.body.append(ov); name.focus();
+}
+
 function secExposure(M, R) {
   const comps = M.exposure.components;
   const rows = comps.map((c, i) => h('tr', null,
@@ -241,7 +291,7 @@ function secExposure(M, R) {
     h('td', null, h('code', null, c.dict_var || '—')), h('td', null, c.kind === 'any_of' ? 'אחד מתוך רשימה' : 'שאלה בודדת')));
   const chk = R.levels.checks[0];
   return sec('1. חשיפה (Total Exposed)', `נחשפים: ${R.levels.bases.exposed}`, '',
-    h('p', { class: 'muted' }, 'נחשפים = איחוד שאלות המדיה שסומנו. סמן/י או בטל/י רכיבים; המספר מתעדכן.'),
+    h('p', { class: 'muted' }, 'נחשפים = איחוד שאלות המדיה שסומנו. סמן/י או בטל/י רכיבים; המספר מתעדכן. בקרב הנחשפים יש הטיה לטובת משתמשי המותג, ולכן בטבלאות מוצגת עמודה "נחשפים שאינם משתמשים" (חשיפה × לא לקוחות, לפי ההגדרה בסעיף 2) במקום "לא נחשפים".'),
     h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['כלול', 'שאלת מדיה', 'משתנה מילון', 'סוג'].map(x => h('th', null, x)))), h('tbody', null, ...rows))),
     chk ? h('div', { class: 'alert ' + (chk[2] === 'OK' ? 'ok' : 'warn') }, `${chk[0]}: ${chk[1]}`) : null,
     h('div', { class: 'muted' }, levelBases(R)));
@@ -278,7 +328,7 @@ function secCustomers(M, R) {
     h('option', { value: '' }, 'קיצור: שורת מותג בשאלת השימוש ל-3 חודשים…'),
     ...opts.map(o => h('option', { value: o.var, selected: o.var === cur }, o.text.replace(/\[[^\]]*\]/g, '').trim()))) : null;
   showValues();
-  return sec('2. לקוחות / לא לקוחות (עמודות D ו-E)', `לקוחות: ${R.levels.bases.customers} · לא לקוחות: ${R.levels.bases.noncust}`, '',
+  return sec('2. לקוחות / לא לקוחות (עמודות D ו-E)', `לקוחות: ${R.levels.bases.customers} · לא לקוחות: ${R.levels.bases.noncust} · נחשפים שאינם משתמשים: ${R.levels.bases.expnonuser}`, '',
     h('p', { class: 'muted' }, 'בחר/י על איזה משתנה מחולקים לקוחות ולא לקוחות, וסמן/י אילו ערכים מגדירים "לקוח". כל השאר (כולל ריקים) = לא לקוח. בדרך כלל: שורת המותג הנבדק בשאלת השימוש ל-3 החודשים (ערך 1). המערכת לא מנחשת את המותג. חיתוך זה אינו מיובא ל-DATA_לייבוא.'),
     !cu ? h('div', { class: 'alert warn' }, 'טרם הוגדר משתנה לקוחות — עמודות D/E ריקות.') : null,
     h('div', { class: 'row' }, h('label', { class: 'f' }, 'משתנה', picker), quick ? h('label', { class: 'f' }, 'קיצור', quick) : null),
@@ -504,8 +554,8 @@ function secResults(open) {
     if (btn) { btn.disabled = true; btn.textContent = 'מחשב…'; }
     try { if (!S.catalog) S.catalog = await api(`/projects/${S.project.id}/catalog`); renderTables(host, await api(`/projects/${S.project.id}/results`), () => { host.replaceChildren(h('p', { class: 'muted' }, 'מחשב…')); load(); }); } catch (e) { host.replaceChildren(h('div', { class: 'alert err' }, e.message)); }
   }
-  const d = h('details', { class: 'sec', open: !!open }, h('summary', null, h('h2', null, '7. ממצאים — טבלאות לאימות'), h('span', { class: 'pill' }, 'מדגם · נחשפים · לא נחשפים · לקוחות · לא לקוחות')),
-    h('div', { class: 'body' }, h('p', { class: 'muted' }, 'כל השאלות כפי שיופיעו באקסל, עם n (מספר משיבים) לכל תשובה ואותיות מובהקות (אות גדולה 95%, קטנה 90%; B מול C, D מול E). ערך אדום = בסיס קטן מ-30. אם משהו לא נראה נכון, חזור/י לסעיף 3 והחלף/אשר את ההתאמה.'), host));
+  const d = h('details', { class: 'sec', open: !!open }, h('summary', null, h('h2', null, '7. ממצאים — טבלאות לאימות'), h('span', { class: 'pill' }, 'מדגם · נחשפים · נחשפים שאינם משתמשים · לקוחות · לא לקוחות · חיתוכים נוספים')),
+    h('div', { class: 'body' }, h('p', { class: 'muted' }, 'כל השאלות כפי שיופיעו באקסל, עם n (מספר משיבים) לכל תשובה ואותיות מובהקות (אות גדולה 95%, קטנה 90%; D מול E; חיתוך נוסף מול השאר ▲▼). ערך אדום = בסיס קטן מ-30. אם משהו לא נראה נכון, חזור/י לסעיף 3 והחלף/אשר את ההתאמה.'), host));
   d.addEventListener('toggle', () => { if (d.open && !host.dataset.loaded) { host.dataset.loaded = 1; load(host.querySelector('button')); } });
   if (open) setTimeout(() => { if (!host.dataset.loaded) { host.dataset.loaded = 1; load(host.querySelector('button')); } }, 0);
   return d;
@@ -585,7 +635,7 @@ function renderResult(host, r) {
     h('div', { class: 'kv', style: 'margin:8px 0' }, h('b', null, 'מדגם'), 'N=' + b.sample, h('b', null, 'נחשפים'), 'N=' + b.exposed, h('b', null, 'לקוחות / לא לקוחות'), `${b.customers} / ${b.noncust}`,
       h('b', null, 'הגדרת חשיפה'), (r.exposure.label || '') + ': ' + r.exposure.components.join(' | ')),
     h('div', { class: 'alert ' + (r.summary.errors.length ? 'err' : 'ok') }, `${r.summary.tables} טבלאות · ${r.summary.slots} משתני מילון · ${r.summary.checks} בקרות · ${r.summary.flagged.length} חריגות · ${r.summary.errors.length} שגיאות`),
-    h('a', { class: 'btn', href: `/api/projects/${S.project.id}/download` }, '⬇ הורד אקסל'), ' ', h('span', { class: 'muted' }, `${r.filename} · ${(r.size / 1024).toFixed(0)}KB · גרסה ${r.build.app_version} · ${r.build.dictionary_version}`)));
+    h('a', { class: 'btn', href: `api/projects/${S.project.id}/download` }, '⬇ הורד אקסל'), ' ', h('span', { class: 'muted' }, `${r.filename} · ${(r.size / 1024).toFixed(0)}KB · גרסה ${r.build.app_version} · ${r.build.dictionary_version}`)));
   host.append(h('div', { class: 'card' }, h('h2', null, 'בקרות'), h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בדיקה', 'תוצאה', 'סטטוס'].map(x => h('th', null, x)))),
     h('tbody', null, ...r.checks.map(c => h('tr', { class: c[2] === 'OK' ? '' : 'need' }, h('td', null, c[0]), h('td', null, c[1]), h('td', null, c[2]))))))));
   if (r.open_assumptions.length) host.append(h('div', { class: 'card' }, h('h2', null, 'הנחות פתוחות (מופיעות גם בגליון הגדרות)'), h('ul', null, ...r.open_assumptions.slice(0, 60).map(x => h('li', null, x)))));
@@ -622,7 +672,7 @@ async function viewLibrary() {
   main.append(h('div', { class: 'card' }, h('h2', null, 'תבניות'), tpls.length ? h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['שם', 'לקוח', 'מעקב', 'גרסה', 'עודכן ע"י', 'תאריך', ''].map(x => h('th', null, x)))), h('tbody', null, ...trows))) : h('p', { class: 'muted' }, 'אין תבניות עדיין.'), hist));
   const up = h('input', { type: 'file', accept: '.xlsx' });
   const upBtn = h('button', { class: 'btn small' }, 'העלה גרסת מילון חדשה');
-  upBtn.onclick = () => guarded(upBtn, async () => { if (!up.files[0]) throw new Error('בחר/י קובץ'); const fd = new FormData(); fd.append('file', up.files[0]); const r = await fetch('/api/library/dictionaries', { method: 'POST', body: fd }); const d = await r.json(); if (!r.ok) throw new Error(d.detail); toast('הועלה: ' + d.variables + ' משתנים'); viewLibrary(); });
+  upBtn.onclick = () => guarded(upBtn, async () => { if (!up.files[0]) throw new Error('בחר/י קובץ'); const fd = new FormData(); fd.append('file', up.files[0]); const r = await fetch('api/library/dictionaries', { method: 'POST', body: fd }); const d = await r.json(); if (!r.ok) throw new Error(d.detail); toast('הועלה: ' + d.variables + ' משתנים'); viewLibrary(); });
   main.append(h('div', { class: 'card' }, h('h2', null, 'גרסאות מילון'), h('p', { class: 'muted' }, 'פרויקט חדש משתמש במילון הפעיל. פרויקט קיים נשאר על הגרסה שנבחרה בו (דטרמיניזם).'),
     h('ul', null, ...dicts.map(d => h('li', null, d.file, d.active ? h('span', { class: 'badge exact', style: 'margin-inline-start:8px' }, 'פעיל') : h('button', { class: 'btn small ghost', style: 'margin-inline-start:8px', onclick: async () => { await api('/library/dictionary/active', { method: 'PUT', json: { file: d.file } }); viewLibrary(); } }, 'הפוך לפעיל'), ' ', h('span', { class: 'muted' }, d.uploaded_at.replace('T', ' '))))),
     h('div', { class: 'row' }, up, upBtn)));

@@ -219,6 +219,37 @@ def test_summary_members_in_results_and_workbook(client):
     client.delete(f"/api/projects/{pid}")
 
 
+@needs_golden
+def test_columns_exposed_nonusers_and_segments(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}).json()["project"]["id"]
+    rv = client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס"}).json()
+    cols = rv["levels"]["columns"]
+    assert [c["key"] for c in cols] == ["sample", "exposed", "expnonuser", "customers", "noncust"]
+    assert [c["letter"] for c in cols] == list("ABCDE") and cols[2]["name"] == "נחשפים שאינם משתמשים" and cols[2]["n"] == 74
+    r = client.put(f"/api/projects/{pid}/mapping", json={"segment_add": {"name": "קונות פמפרס", "var": "USAGEr3", "values": [1]}}, headers={"x-user": "u"})
+    assert r.status_code == 200, r.text
+    cols = r.json()["levels"]["columns"]
+    assert cols[-1]["letter"] == "F" and cols[-1]["segment"] and cols[-1]["name"] == "קונות פמפרס"
+    rs = client.get(f"/api/projects/{pid}/results").json()
+    row = next(r_ for t in rs["tables"] for r_ in t["rows"] if r_["united"] == "ENJOY#91")
+    key = cols[-1]["key"]
+    assert row["values"][key] is not None and row["n"][key] == cols[-1]["n"] and row["letters"]["customers"] in ("", "E", "e")
+    assert "notexposed" not in row["values"] and row["letters"]["exposed"] == "" and row["letters"]["expnonuser"] == ""
+    # analysis only: the new columns never reach DATA_import
+    j = client.post(f"/api/projects/{pid}/run").json()["job_id"]
+    assert wait_job(client, j)["status"] == "done"
+    wb = openpyxl.load_workbook(io.BytesIO(client.get(f"/api/projects/{pid}/download").content))
+    assert {r_[6] for r_ in wb["DATA_לייבוא"].iter_rows(min_row=2, values_only=True) if r_[4]} <= {"מדגם", "נחשפים"}
+    hdr = [c.value for c in wb["ממצאים"][5]] if False else None
+    assert any("קונות פמפרס" in str(c.value) for row_ in wb["ממצאים"].iter_rows(max_row=12) for c in row_)
+    assert client.put(f"/api/projects/{pid}/mapping", json={"segment_add": {"name": "", "var": "USAGEr3", "values": [1]}}).status_code == 400
+    assert client.put(f"/api/projects/{pid}/mapping", json={"segment_add": {"name": "x", "var": "USAGEr3", "values": [9]}}).status_code == 400
+    sid = r.json()["mapping"]["segments"][0]["id"]
+    r2 = client.put(f"/api/projects/{pid}/mapping", json={"segment_remove": sid})
+    assert r2.status_code == 200 and len(r2.json()["levels"]["columns"]) == 5
+    client.delete(f"/api/projects/{pid}")
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400
