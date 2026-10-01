@@ -170,6 +170,16 @@ def test_custom_customer_definition(client):
     assert client.put(f"/api/projects/{pid}/mapping", json={"customer_def": {"var": "USAGEr2", "values": [7]}}).status_code == 400
 
 
+@needs_golden
+def test_project_name_follows_the_form_and_renames(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}, data={"name": "ישן"}).json()["project"]["id"]
+    rv = client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס", "name": "שם סופי"}).json()
+    assert rv["mapping"]["project"]["name"] == "שם סופי"
+    assert next(p for p in client.get("/api/projects").json() if p["id"] == pid)["name"] == "שם סופי"
+    client.put(f"/api/projects/{pid}/mapping", json={"project": {"name": "שם חדש"}})
+    assert next(p for p in client.get("/api/projects").json() if p["id"] == pid)["name"] == "שם חדש"
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400

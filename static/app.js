@@ -140,7 +140,7 @@ async function viewStep1() {
     const go = h('button', { class: 'btn gold' }, 'המשך לסקירה ←');
     go.onclick = () => guarded(go, async () => {
       S.project = d.project;
-      S.review = await api(`/projects/${d.project.id}/profile`, { json: { brand: brand.value, campaign_id: camp.value, omnibus: omni.checked, template_id: tpl || null } });
+      S.review = await api(`/projects/${d.project.id}/profile`, { json: { name: nameIn.value.trim(), brand: brand.value, campaign_id: camp.value, omnibus: omni.checked, template_id: tpl || null } });
       viewStep2();
     });
     info.append(h('hr'), h('div', { class: 'alert ok' }, `נקרא: N=${d.project.n}, ${d.n_columns} עמודות.`), ...warns,
@@ -180,7 +180,11 @@ async function viewStep2() {
   setStep(2);
   const main = $('#main'); main.replaceChildren();
   const R = S.review, M = R.mapping, pid = S.project.id;
-  main.append(backBar(viewStep1, 'חזרה לשלב 1 (פרויקט)'), h('h1', null, `שלב 2 · סקירה — ${M.project.name || ''}`));
+  main.append(backBar(viewStep1, 'חזרה לשלב 1 (פרויקט)'), h('h1', null, `שלב 2 · סקירה — ${M.project.name || ''} `,
+    h('button', { class: 'btn small ghost', title: 'שנה את שם הפרויקט', onclick: async () => {
+      const n = await askText('שם הפרויקט:', M.project.name || ''); if (!n) return;
+      try { await patch({ project: { name: n } }); S.project.name = n; viewStep2(); } catch (e) { toast('⚠ ' + e.message); }
+    } }, '✎ שנה שם')));
   const q = M.questionnaire;
   if (M.template_diff) {
     const d = M.template_diff;

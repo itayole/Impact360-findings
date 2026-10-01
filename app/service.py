@@ -88,8 +88,10 @@ def _qnr(store, pid):
     return Q.parse_docx(store.qnr_path(pid))
 
 
-def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id=None, template_version=None, user=""):
+def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id=None, template_version=None, user="", name=""):
     p = store.project(pid)
+    if (name or "").strip():
+        p["name"] = name.strip()[:120]        # the name can be edited in the form after the upload
     df, meta = runtime.load_sav(store, pid)
     dpath = store.dictionary_path(p["dictionary"])
     vars_, codes = runtime.load_dictionary(dpath)
@@ -253,7 +255,8 @@ def apply_patch(store, pid, patch, user=""):
         if f in ("name", "brand", "campaign_id", "weight_var"):
             if mapping["project"].get(f) != v:
                 mapping["project"][f] = v
-                p[f] = v if f in p else p.get(f)
+                if f in p:
+                    p[f] = v
                 _log(mapping, user, "project", f"{f} = {v}")
     if "roles" in patch:
         df, meta = runtime.load_sav(store, pid)

@@ -159,7 +159,7 @@ async def reattach(pid: str, sav: UploadFile = File(...)):
 
 @app.post("/api/projects/{pid}/profile")
 def profile(pid: str, request: Request, body: dict = Body(...)):
-    return service.run_profile(store, pid, brand=body.get("brand", ""), campaign_id=body.get("campaign_id", ""),
+    return service.run_profile(store, pid, name=body.get("name", ""), brand=body.get("brand", ""), campaign_id=body.get("campaign_id", ""),
                                omnibus=bool(body.get("omnibus")), template_id=body.get("template_id"),
                                template_version=body.get("template_version"), user=user_of(request))
 
