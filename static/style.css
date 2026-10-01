@@ -66,6 +66,9 @@ td.num.low { color: var(--red); font-style: italic; }
 .split { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
 .netitem { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; background: #fff; }
+.netitem { position: relative; }
+.netx { position: absolute; top: 4px; inset-inline-end: 4px; width: 20px; height: 20px; line-height: 16px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #6b7280; cursor: pointer; font-size: 12px; }
+.netx:hover { background: #fde8e6; color: var(--red); border-color: #f0b3ad; }
 .netitem.active { border-color: var(--gold); background: var(--lgold); }
 .netitem .t { font-weight: 700; font-size: 13px; }
 .progress { height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin: 10px 0; }

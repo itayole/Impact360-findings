@@ -396,6 +396,13 @@ async function secNets() {
 
     const left = h('div', null, h('div', { class: 'qtext' }, b.question || b.key), h('div', { class: 'muted', style: 'margin-bottom:6px' }, 'סיכומים לשאלה: ' + (b.dict_var || 'ללא משתנה מילון')),
       ...defs.map(d => h('div', { class: 'netitem' + (d.key === S.activeNet ? ' active' : ''), onclick: () => { S.activeNet = d.key; render(); } },
+        nets[d.key] ? h('button', { class: 'netx', title: 'מחק סיכום זה', 'aria-label': 'מחק סיכום', onclick: async ev => {
+          ev.stopPropagation();
+          if (!await askConfirm(`למחוק את הסיכום "${d.label}"?`)) return;
+          delete nets[d.key]; if (S.activeNet === d.key) S.activeNet = null;
+          try { await patch({ questions: { [b.key]: { nets } } }); toast('הסיכום נמחק'); } catch (e) { toast('⚠ ' + e.message); }
+          render();
+        } }, '✕') : null,
         h('div', { class: 't' }, d.label), h('div', { class: 'muted' }, d.dict ? d.key : 'סיכום בשם חופשי (לא מיובא ל-DATA)'),
         nets[d.key] ? h('div', { class: 'muted' }, (nets[d.key].include ? 'נטו: ' + nets[d.key].include.length + ' קודים' : 'כל תשובה מלבד ' + (nets[d.key].exclude || []).length)) : h('div', { class: 'muted' }, 'לא הוגדר'))),
       h('button', { class: 'btn small ghost', onclick: async () => { const n = await askText('שם הסיכום החופשי:'); if (!n) return; const k = 'USER:' + Math.random().toString(36).slice(2, 8); nets[k] = { include: [], label: n }; S.activeNet = k; render(); } }, '+ סיכום חדש'));
