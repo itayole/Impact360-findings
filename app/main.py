@@ -190,6 +190,18 @@ def results(pid: str):
     return service.results(store, pid)
 
 
+@app.get("/api/projects/{pid}/variables")
+def variables(pid: str):
+    store.project(pid)
+    return service.variables(store, pid)
+
+
+@app.get("/api/projects/{pid}/variables/{name}")
+def variable_values(pid: str, name: str):
+    store.project(pid)
+    return service.variable_values(store, pid, name)
+
+
 @app.get("/api/projects/{pid}/snapshots")
 def snapshots(pid: str):
     store.project(pid)

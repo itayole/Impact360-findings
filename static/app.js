@@ -244,12 +244,41 @@ function secExposure(M, R) {
 
 function secCustomers(M, R) {
   const opts = M.customer_options || [];
-  const cur = M.customer && M.customer.var;
-  const sel = h('select', { onchange: async e => { await patch({ customer_var: e.target.value }); viewStep2(); } },
-    ...opts.map(o => h('option', { value: o.var, selected: o.var === cur }, o.text.replace(/\[[^\]]*\]/g, '').trim())));
-  return sec('2. לקוחות (קנו ב-3 החודשים האחרונים)', `לקוחות: ${R.levels.bases.customers} · לא לקוחות: ${R.levels.bases.noncust}`, '',
-    opts.length ? h('label', { class: 'f' }, 'שורת המותג הנבדק בשאלת השימוש (ריק = לא לקוח)', sel) : h('div', { class: 'alert warn' }, 'לא זוהתה שאלת שימוש ל-3 חודשים — עמודות הלקוחות יהיו ריקות.'),
-    M.customer ? h('p', { class: 'muted' }, 'משתנה: ', h('code', null, M.customer.var), ' · הבחירה חייבת להיות המותג הנבדק — המערכת לא מנחשת.') : null);
+  const cu = M.customer || null;
+  const cur = cu && cu.var;
+  const valsHost = h('div', { class: 'tablewrap', style: 'margin-top:8px' }, 'טוען ערכים…');
+  let chosenVar = cur || '';
+  let chosen = new Set((cu && cu.customer_values) || []);
+  async function applyDef() {
+    if (!chosen.size) { toast('יש לסמן לפחות ערך אחד שמגדיר לקוח'); return; }
+    try { await patch({ customer_def: { var: chosenVar, values: [...chosen] } }); viewStep2(); } catch (e) { toast('⚠ ' + e.message); }
+  }
+  async function showValues() {
+    if (!chosenVar) { valsHost.textContent = 'בחר/י משתנה.'; return; }
+    try {
+      const d = await api(`/projects/${S.project.id}/variables/${encodeURIComponent(chosenVar)}`);
+      valsHost.replaceChildren(h('table', null, h('thead', null, h('tr', null, ...['לקוח (D)', 'ערך', 'תווית', 'n', '%'].map(x => h('th', null, x)))),
+        h('tbody', null, ...d.values.map(v => h('tr', { class: chosen.has(v.value) ? 'sum' : '' },
+          h('td', null, h('input', { type: 'checkbox', checked: chosen.has(v.value), onchange: e => { e.target.checked ? chosen.add(v.value) : chosen.delete(v.value); applyDef(); } })),
+          h('td', { class: 'num' }, String(v.value)), h('td', null, v.label || ''), h('td', { class: 'num' }, v.n), h('td', { class: 'num' }, (100 * v.n / d.n).toFixed(1)))),
+          d.n_missing ? h('tr', null, h('td', null, ''), h('td', { class: 'num' }, '—'), h('td', null, 'ריק (נחשב לא לקוח)'), h('td', { class: 'num' }, d.n_missing), h('td', { class: 'num' }, (100 * d.n_missing / d.n).toFixed(1))) : null)));
+    } catch (e) { valsHost.textContent = '⚠ ' + e.message; }
+  }
+  const picker = comboDict(cur || '', v => {
+    if (!v) return;
+    chosenVar = v; chosen = new Set(); valsHost.textContent = 'טוען ערכים…'; showValues();
+    toast('סמן/י את הערכים שמגדירים לקוח (עמודה D)');
+  }, async () => api(`/projects/${S.project.id}/variables`), '(בחר/י משתנה)', false);
+  const quick = opts.length ? h('select', { onchange: async e => { if (!e.target.value) return; chosenVar = e.target.value; chosen = new Set([1]); await applyDef(); } },
+    h('option', { value: '' }, 'קיצור: שורת מותג בשאלת השימוש ל-3 חודשים…'),
+    ...opts.map(o => h('option', { value: o.var, selected: o.var === cur }, o.text.replace(/\[[^\]]*\]/g, '').trim()))) : null;
+  showValues();
+  return sec('2. לקוחות / לא לקוחות (עמודות D ו-E)', `לקוחות: ${R.levels.bases.customers} · לא לקוחות: ${R.levels.bases.noncust}`, '',
+    h('p', { class: 'muted' }, 'בחר/י על איזה משתנה מחולקים לקוחות ולא לקוחות, וסמן/י אילו ערכים מגדירים "לקוח". כל השאר (כולל ריקים) = לא לקוח. בדרך כלל: שורת המותג הנבדק בשאלת השימוש ל-3 החודשים (ערך 1). המערכת לא מנחשת את המותג. חיתוך זה אינו מיובא ל-DATA_לייבוא.'),
+    !cu ? h('div', { class: 'alert warn' }, 'טרם הוגדר משתנה לקוחות — עמודות D/E ריקות.') : null,
+    h('div', { class: 'row' }, h('label', { class: 'f' }, 'משתנה', picker), quick ? h('label', { class: 'f' }, 'קיצור', quick) : null),
+    valsHost,
+    cu ? h('p', { class: 'muted' }, 'הגדרה נוכחית: ', h('code', null, cu.option_text || cu.var)) : null);
 }
 
 async function loadDictVars() {
@@ -258,20 +287,21 @@ async function loadDictVars() {
 }
 
 /* searchable dictionary-variable picker: opens with ALL variables, filters as you type (a native datalist only shows matches of the current text) */
-function comboDict(current, onPick) {
-  const inp = h('input', { type: 'text', class: 'inline-input', value: current || '', placeholder: '(ללא — ניתוח בלבד)', autocomplete: 'off' });
+function comboDict(current, onPick, getItems, placeholder, noneLabel) {
+  getItems = getItems || loadDictVars;
+  const inp = h('input', { type: 'text', class: 'inline-input', value: current || '', placeholder: placeholder || '(ללא — ניתוח בלבד)', autocomplete: 'off' });
   const caret = h('button', { type: 'button', class: 'btn small ghost', title: 'הצג את כל המשתנים', onclick: () => { inp.focus(); open(true); } }, '▾');
   let panel = null;
   function close() { if (panel) { panel.remove(); panel = null; } document.removeEventListener('mousedown', outside, true); }
   function outside(ev) { if (panel && !panel.contains(ev.target) && ev.target !== inp && ev.target !== caret) { inp.value = current || ''; close(); } }
   async function open(all) {
-    const vars = await loadDictVars();
+    const vars = await getItems();
     const q = all ? '' : inp.value.trim().toLowerCase();
     const items = vars.filter(v => !q || (v.var + ' ' + v.title + ' ' + v.module).toLowerCase().includes(q)).slice(0, 250);
     if (!panel) { panel = h('div', { class: 'combo' }); document.body.append(panel); document.addEventListener('mousedown', outside, true); }
     const r = inp.getBoundingClientRect();
     Object.assign(panel.style, { top: (r.bottom + 2) + 'px', left: Math.max(4, Math.min(r.left, innerWidth - 360)) + 'px' });
-    panel.replaceChildren(h('div', { class: 'opt none', onclick: () => { close(); onPick(null); } }, '— ללא משתנה מילון (ניתוח בלבד) —'),
+    panel.replaceChildren(noneLabel === false ? null : h('div', { class: 'opt none', onclick: () => { close(); onPick(null); } }, noneLabel || '— ללא משתנה מילון (ניתוח בלבד) —'),
       ...items.map(v => h('div', { class: 'opt' + (v.var === current ? ' cur' : ''), onclick: () => { close(); onPick(v.var); } },
         h('code', null, v.var), ' ', v.title, h('span', { class: 'muted' }, v.module ? ' · ' + v.module : ''))),
       items.length ? null : h('div', { class: 'opt muted' }, 'אין התאמה'));

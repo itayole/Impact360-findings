@@ -1,6 +1,7 @@
 """Business logic behind the API routes (kept out of main.py so it can be tested without HTTP)."""
 import copy
 import os
+import re
 import shutil
 import time
 
@@ -214,6 +215,27 @@ def apply_patch(store, pid, patch, user=""):
         cu["review"] = "נבחר על ידי המשתמש"
         mapping["customer"] = cu
         _log(mapping, user, "customer", f"מותג נבדק (לקוחות): {opts[cv]['text']}")
+    if patch.get("customer_def"):
+        d = patch["customer_def"]
+        df, meta = runtime.load_sav(store, pid)
+        var, vals = d.get("var"), d.get("values") or []
+        if var not in df.columns:
+            raise Bad("המשתנה לא קיים בקובץ ה-SAV")
+        if not vals:
+            raise Bad("יש לסמן לפחות ערך אחד שמגדיר לקוח")
+        present = {float(x) for x in df[var].dropna().unique()}
+        vals = [float(v) for v in vals]
+        if any(v not in present for v in vals):
+            raise Bad("אחד הערכים שנבחרו לא קיים במשתנה")
+        vl = (meta.variable_value_labels or {}).get(var) or {}
+        labs = [re.sub(r"\[[^\]]*\]", "", str(vl.get(v, vl.get(int(v), v)))).strip() for v in vals]
+        _, qtxt = L.split_label(var, dict(zip(meta.column_names, meta.column_labels)).get(var))
+        cu = dict(var=var, customer_values=vals, noncustomer_values=sorted(present - set(vals)), nan_as="noncustomer",
+                  source_block=(mapping.get("customer") or {}).get("source_block", ""),
+                  option_text=f"{var} ∈ {{{', '.join(labs)}}}", review="הוגדר על ידי המשתמש: לקוחות = הערכים שסומנו; כל השאר (כולל ריקים) = לא לקוחות")
+        if mapping.get("customer") != cu:
+            mapping["customer"] = cu
+            _log(mapping, user, "customer", f"הגדרת לקוחות: {var} ∈ {', '.join(labs)}")
     for f, v in (patch.get("project") or {}).items():
         if f in ("name", "brand", "campaign_id", "weight_var"):
             if mapping["project"].get(f) != v:
@@ -344,6 +366,37 @@ def start_run(store, pid, user=""):
         return res
 
     return runtime.jobs.submit(pid, work)
+
+
+# ------------------------------------------------------------------------------------------ variables (customer split)
+def variables(store, pid):
+    """Every SAV column usable to define customers (metadata only)."""
+    df, meta = runtime.load_sav(store, pid)
+    labels = dict(zip(meta.column_names, meta.column_labels))
+    vl = meta.variable_value_labels or {}
+    out = []
+    for n in meta.column_names:
+        nun = int(df[n].nunique(dropna=True))
+        if df[n].dtype == object or nun == 0 or nun > 40:
+            continue
+        opt, q = L.split_label(n, labels.get(n))
+        title = re.sub(r"\[[^\]]*\]", "", " — ".join(x for x in (opt, q) if x)).strip()
+        out.append(dict(var=n, title=title[:140], module=f"{nun} ערכים"))
+    return out
+
+
+def variable_values(store, pid, name):
+    df, meta = runtime.load_sav(store, pid)
+    if name not in df.columns:
+        raise KeyError(name)
+    vl = (meta.variable_value_labels or {}).get(name) or {}
+    ser = df[name]
+    n_all = len(ser)
+    vals = []
+    for v, c in ser.value_counts(dropna=True).sort_index().items():
+        lab = vl.get(v, vl.get(float(v), vl.get(int(v), ""))) if v == v else ""
+        vals.append(dict(value=float(v), label=re.sub(r"\[[^\]]*\]", "", str(lab)).strip(), n=int(c)))
+    return dict(var=name, values=vals, n_missing=int(ser.isna().sum()), n=n_all)
 
 
 # ------------------------------------------------------------------------------------------ snapshots

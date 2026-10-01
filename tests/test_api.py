@@ -150,6 +150,25 @@ def test_snapshots_save_load_delete(client):
     assert client.post(f"/api/projects/{pid}/snapshots", json={"name": " "}).status_code == 400
 
 
+@needs_golden
+def test_custom_customer_definition(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}).json()["project"]["id"]
+    rv = client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס"}).json()
+    assert rv["levels"]["bases"]["customers"] == 246
+    names = [v["var"] for v in client.get(f"/api/projects/{pid}/variables").json()]
+    assert "USAGEr1" in names and "USAGEr2" in names
+    d = client.get(f"/api/projects/{pid}/variables/USAGEr2").json()
+    assert d["n"] == 406 and sum(v["n"] for v in d["values"]) + d["n_missing"] == 406
+    r = client.put(f"/api/projects/{pid}/mapping", json={"customer_def": {"var": "USAGEr2", "values": [1]}}, headers={"x-user": "u"})
+    assert r.status_code == 200, r.text
+    b = r.json()["levels"]["bases"]
+    assert b["customers"] == next(v["n"] for v in d["values"] if v["value"] == 1) and b["customers"] + b["noncust"] == 406
+    assert any("USAGEr2" in x["what"] for x in client.get(f"/api/projects/{pid}/decisions").json())
+    assert client.put(f"/api/projects/{pid}/mapping", json={"customer_def": {"var": "USAGEr2", "values": []}}).status_code == 400
+    assert client.put(f"/api/projects/{pid}/mapping", json={"customer_def": {"var": "nope", "values": [1]}}).status_code == 400
+    assert client.put(f"/api/projects/{pid}/mapping", json={"customer_def": {"var": "USAGEr2", "values": [7]}}).status_code == 400
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400
