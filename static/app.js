@@ -443,9 +443,20 @@ async function secNets() {
     try { pv = await api(`/projects/${S.project.id}/preview`, { json: { block: b.key, nets: localNets[b.key] } }); } catch (e) { tblHost.textContent = '⚠ ' + e.message; return; }
     const sel = setOf();
     const hdr = h('tr', null, h('th', null, ''), h('th', null, 'קוד'), ...LEVELS.map(l => h('th', null, `${LEVEL_HE[l]} (${LETTER[l]})`, h('div', { class: 'muted', style: 'color:#dbe4f5' }, 'N=' + pv.bases[l]))));
-    const rows = pv.codes.map(c => h('tr', null,
-      h('td', null, S.activeNet ? h('input', { type: 'checkbox', checked: sel.has(c.var), onchange: e => { const s = setOf(); e.target.checked ? s.add(c.var) : s.delete(c.var); const k = mode === 'include' ? 'include' : 'exclude'; nets[S.activeNet] = { ...(cur || {}), [k]: [...s] }; change(); } }) : ''),
-      h('td', null, c.label), ...LEVELS.map(l => valueCell(c, l, true))));
+    /* three states per code: empty = not assigned · ✔ (blue) = in the selected summary · ✔ (grey) = in another summary.
+       A grey code can still be ticked (e.g. 'all correct messages' reuses codes of the other summaries). Only 'include'
+       summaries own codes; an 'all answers except …' summary lists exclusions, not members. */
+    const labelOf = k => (defs.find(d => d.key === k) || {}).label || (nets[k] && nets[k].label) || k;
+    const otherNets = {};
+    Object.keys(nets).forEach(k => { if (k !== S.activeNet && nets[k].include) nets[k].include.forEach(v => (otherNets[v] = otherNets[v] || []).push(labelOf(k))); });
+    const rows = pv.codes.map(c => {
+      const mine = sel.has(c.var) && mode === 'include', other = !mine && !!otherNets[c.var];
+      const box = S.activeNet ? h('input', { type: 'checkbox', class: other ? 'other' : '', checked: sel.has(c.var) || other,
+        title: other ? 'משויך לסיכום אחר: ' + otherNets[c.var].join(' · ') + ' (אפשר לסמן גם כאן)' : '',
+        onchange: () => { const s = setOf(); s.has(c.var) ? s.delete(c.var) : s.add(c.var); const k = mode === 'include' ? 'include' : 'exclude'; nets[S.activeNet] = { ...(cur || {}), [k]: [...s] }; change(); } }) : '';
+      return h('tr', null, h('td', null, box),
+        h('td', null, c.label, otherNets[c.var] && !mine ? h('div', { class: 'assigned' }, '↳ ' + otherNets[c.var].join(' · ')) : null), ...LEVELS.map(l => valueCell(c, l, true)));
+    });
     tblHost.replaceChildren(h('table', null, h('thead', null, hdr), h('tbody', null, ...rows)));
     if (pv.nets.length) netHost.append(h('h2', { style: 'font-size:15px;margin:6px 0' }, 'תוצאות הסיכומים (חיות, אותה חישוביות כמו באקסל)'),
       h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'סיכום'), h('th', null, 'united'), ...LEVELS.map(l => h('th', null, LEVEL_HE[l] + ' (' + LETTER[l] + ')')))),

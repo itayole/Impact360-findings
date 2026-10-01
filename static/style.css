@@ -90,6 +90,8 @@ td[title], .tab[title], summary[title] { cursor: help; }
 .savestate { font-size: 13px; color: #6b7280; }
 .savestate.ok { color: var(--green); font-weight: 700; }
 .savestate.err { color: var(--red); font-weight: 700; }
+input[type=checkbox].other { accent-color: #9aa0a6; opacity: .75; }
+.assigned { font-size: 12px; color: #8a8f98; }
 .foot { text-align: center; color: #6b7280; font-size: 12px; padding: 16px; border-top: 1px solid var(--line); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
 .kv b { color: var(--navy); }
