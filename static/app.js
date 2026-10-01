@@ -371,7 +371,7 @@ async function secNets() {
   try { S.catalog = await api(`/projects/${S.project.id}/catalog`); } catch (e) { S.catalog = []; }
   const rank = b => (b.wanted.length ? 0 : (b.type === 'coded_open' ? 1 : (b.dict_var ? 2 : 3)));
   const blocks = S.catalog.slice().sort((a, b) => rank(a) - rank(b));
-  if (!blocks.length) return sec('5. סיכומי קודים (Net Builder)', '', '', h('p', { class: 'muted' }, 'אין שאלות מקודדות/רב-ברירה בפרויקט.'));
+  if (!blocks.length) return sec('5. סיכומי קודים (Count Builder)', '', '', h('p', { class: 'muted' }, 'אין שאלות מקודדות/רב-ברירה בפרויקט.'));
   const localNets = {}; blocks.forEach(b => localNets[b.key] = JSON.parse(JSON.stringify(b.nets || {})));
   S.netBlock = S.netBlock && blocks.find(b => b.key === S.netBlock) ? S.netBlock : blocks[0].key;
   S.activeNet = null;
@@ -435,7 +435,7 @@ async function secNets() {
   function change() { clearTimeout(timer); timer = setTimeout(render, 150); }
   render();
   const pending = blocks.filter(b => b.wanted.length && !Object.keys(b.nets || {}).length).length;
-  return sec('5. סיכומי קודים (Net Builder)', pending ? `${pending} שאלות עם סיכומי מילון שטרם הוגדרו` : '', pending ? 'need' : '',
+  return sec('5. סיכומי קודים (Count Builder)', pending ? `${pending} שאלות עם סיכומי מילון שטרם הוגדרו` : '', pending ? 'need' : '',
     h('p', { class: 'muted' }, 'לכל שאלה מקודדת: סמן/י אילו קודים בונים כל סיכום מהמילון (SLOGAN#01, SPONTIMP_CORRECT, SEMIAEX-VD_* ועוד) או סיכום בשם חופשי. המערכת לא מנחשת את הסלוגן/המסר הנכון.'), box);
 }
 
