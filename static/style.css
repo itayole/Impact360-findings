@@ -69,6 +69,10 @@ td.num.low { color: var(--red); font-style: italic; }
 .netitem { position: relative; }
 .netx { position: absolute; top: 4px; inset-inline-end: 4px; width: 20px; height: 20px; line-height: 16px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #6b7280; cursor: pointer; font-size: 12px; }
 .netx:hover { background: #fde8e6; color: var(--red); border-color: #f0b3ad; }
+.netmove { position: absolute; bottom: 4px; inset-inline-end: 4px; display: flex; gap: 2px; }
+.netmove button { width: 20px; height: 18px; padding: 0; font-size: 10px; border: 1px solid var(--line); background: #fff; border-radius: 3px; cursor: pointer; color: #4b5563; }
+.netmove button:hover:not(:disabled) { background: var(--lgold); }
+.netmove button:disabled { opacity: .3; cursor: default; }
 .netitem.active { border-color: var(--gold); background: var(--lgold); }
 .netitem .t { font-weight: 700; font-size: 13px; }
 .progress { height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin: 10px 0; }

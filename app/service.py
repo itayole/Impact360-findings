@@ -1,5 +1,6 @@
 """Business logic behind the API routes (kept out of main.py so it can be tested without HTTP)."""
 import copy
+import json
 import os
 import re
 import shutil
@@ -196,7 +197,7 @@ def apply_patch(store, pid, patch, user=""):
         for f, v in fields.items():
             if f not in ALLOWED_Q_FIELDS:
                 raise Bad(f"שדה לא ניתן לעדכון: {f}")
-            if e.get(f) == v:
+            if json.dumps(e.get(f), ensure_ascii=False) == json.dumps(v, ensure_ascii=False):    # ordered compare: moving a summary is a change
                 continue
             e[f] = v
             what = {"include": lambda: "נכלל בניתוח" if v else "הוחרג מהניתוח (לא רלוונטי)",

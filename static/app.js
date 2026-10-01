@@ -398,9 +398,18 @@ async function secNets() {
   let timer = null;
 
   function netDefs(b) {
-    const defs = b.wanted.map(w => ({ key: w.united, label: w.label, dict: true }));
-    Object.keys(localNets[b.key]).forEach(k => { if (!defs.find(d => d.key === k)) defs.push({ key: k, label: localNets[b.key][k].label || k, dict: false }); });
+    // defined summaries first, in their real order (this is the order of the rows in the tables); then dictionary summaries not defined yet
+    const wanted = Object.fromEntries(b.wanted.map(w => [w.united, w.label]));
+    const defs = Object.keys(localNets[b.key]).map(k => ({ key: k, label: wanted[k] || localNets[b.key][k].label || k, dict: k in wanted }));
+    b.wanted.forEach(w => { if (!defs.find(d => d.key === w.united)) defs.push({ key: w.united, label: w.label, dict: true }); });
     return defs;
+  }
+  function moveNet(b, key, dir) {
+    const n = localNets[b.key], keys = Object.keys(n), i = keys.indexOf(key), j = i + dir;
+    if (i < 0 || j < 0 || j >= keys.length) return;
+    [keys[i], keys[j]] = [keys[j], keys[i]];
+    const o = {}; keys.forEach(k => o[k] = n[k]); localNets[b.key] = o;
+    change();
   }
   async function render() {
     box.replaceChildren();
@@ -416,6 +425,9 @@ async function secNets() {
 
     const left = h('div', null, h('div', { class: 'qtext' }, b.question || b.key), h('div', { class: 'muted', style: 'margin-bottom:6px' }, 'סיכומים לשאלה: ' + (b.dict_var || 'ללא משתנה מילון')),
       ...defs.map(d => h('div', { class: 'netitem' + (d.key === S.activeNet ? ' active' : ''), onclick: () => { S.activeNet = d.key; render(); } },
+        nets[d.key] ? h('span', { class: 'netmove' },
+          h('button', { title: 'הזז למעלה', disabled: Object.keys(nets)[0] === d.key, onclick: ev => { ev.stopPropagation(); moveNet(b, d.key, -1); } }, '▲'),
+          h('button', { title: 'הזז למטה', disabled: Object.keys(nets).slice(-1)[0] === d.key, onclick: ev => { ev.stopPropagation(); moveNet(b, d.key, 1); } }, '▼')) : null,
         nets[d.key] ? h('button', { class: 'netx', title: 'מחק סיכום זה', 'aria-label': 'מחק סיכום', onclick: async ev => {
           ev.stopPropagation();
           if (!await askConfirm(`למחוק את הסיכום "${d.label}"?`)) return;

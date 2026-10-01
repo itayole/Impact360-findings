@@ -180,6 +180,21 @@ def test_project_name_follows_the_form_and_renames(client):
     assert next(p for p in client.get("/api/projects").json() if p["id"] == pid)["name"] == "שם חדש"
 
 
+@needs_golden
+def test_summary_order_is_saved_and_drives_row_order(client):
+    pid = client.post("/api/projects", files={"sav": (SAV.name, open(SAV, "rb"), "application/octet-stream")}).json()["project"]["id"]
+    client.post(f"/api/projects/{pid}/profile", json={"brand": "האגיס"})
+    a = {"SLOGAN#01": {"include": ["vSLOGAN_codedr2"]}, "USER:x": {"include": ["vSLOGAN_codedr3"], "label": "שני"}}
+    client.put(f"/api/projects/{pid}/mapping", json={"questions": {"vSLOGAN_coded": {"nets": a}}})
+    b = {"USER:x": a["USER:x"], "SLOGAN#01": a["SLOGAN#01"]}
+    client.put(f"/api/projects/{pid}/mapping", json={"questions": {"vSLOGAN_coded": {"nets": b}}})      # order only
+    cat = next(x for x in client.get(f"/api/projects/{pid}/catalog").json() if x["key"] == "vSLOGAN_coded")
+    assert list(cat["nets"]) == ["USER:x", "SLOGAN#01"]
+    pv = client.post(f"/api/projects/{pid}/preview", json={"block": "vSLOGAN_coded"}).json()
+    assert [n["label"] for n in pv["nets"]][0] == "שני"
+    client.delete(f"/api/projects/{pid}")
+
+
 def test_upload_validation(client):
     r = client.post("/api/projects", files={"sav": ("x.txt", b"abc", "text/plain")})
     assert r.status_code == 400
