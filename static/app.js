@@ -708,11 +708,15 @@ function drawChart(spec) {
   return svg;
 }
 async function viewStep4() {
+  try { await viewStep4Inner(); } catch (e) { const c = $('#main .card'); if (c) c.replaceChildren(h('div', { class: 'alert err' }, '⚠ שגיאה בהצגת הגרפים: ' + e.message)); throw e; }
+}
+async function viewStep4Inner() {
   setStep(4);
   const main = $('#main'); main.replaceChildren(backBar(viewStep3, 'חזרה להרצה ולתוצאות'), h('h1', null, 'שלב 4 · גרפים'));
   const card = h('div', { class: 'card' }, h('p', { class: 'muted' }, 'טוען גרפים…')); main.append(card);
   let data;
   try { data = await api(`/projects/${S.project.id}/charts`); } catch (e) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ ' + e.message)); return; }
+  if (!data || !Array.isArray(data.specs)) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ השרת מחזיר פורמט ישן — יש להפעיל מחדש את השרת (uvicorn) לאחר העדכון.')); return; }
   const specs = data.specs, st = data.settings;
   if (!specs.length) { card.replaceChildren(h('p', { class: 'muted' }, 'אין שאלות שניתן להציג כגרף.')); return; }
   const typeOpts = (sel) => Object.entries(data.types).map(([k, v]) => h('option', { value: k, selected: k === sel }, v));
