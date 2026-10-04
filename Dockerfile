@@ -13,6 +13,10 @@ COPY app ./app
 COPY static ./static
 COPY library ./library
 
+# Build guard: compile every source with THIS image's Python (3.11). Syntax that only newer Pythons accept fails the build here,
+# instead of producing an image whose container exits at start (release 0.3.2).
+RUN python -m compileall -q app svr
+
 ARG BUILD_TIME=unknown
 ENV BUILD_TIME=${BUILD_TIME}
 
