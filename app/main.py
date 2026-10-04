@@ -83,6 +83,11 @@ async def gone_handler(request, exc):
     return JSONResponse(status_code=410, content=dict(detail=msg))
 
 
+def _disposition(fn):
+    """Content-Disposition for a download (UTF-8 name, percent-encoded). Kept out of an f-string: Python 3.11 (the image) rejects nested same-type quotes."""
+    return "attachment; filename*=UTF-8''" + quote(_safe_name(fn), safe="")
+
+
 def _safe_name(fn):
     """Download name: no path separators, quotes or control characters."""
     return re.sub(r'[\\/"\x00-\x1f]+', "_", fn or "") or "download"
@@ -245,7 +250,7 @@ def charts_pptx(pid: str):
     store.project(pid)
     data, fn = service.charts_pptx(store, pid)
     return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(_safe_name(fn), safe="")}"})
+                    headers={"Content-Disposition": _disposition(fn)})
 
 
 @app.get("/api/projects/{pid}/variables")
@@ -317,7 +322,7 @@ def download(pid: str):
     fn = res.get("filename") or f"{p['name']}_FINDINGS_SAV.xlsx"
     return FileResponse(path, filename=fn,
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(_safe_name(fn), safe="")}"})
+                        headers={"Content-Disposition": _disposition(fn)})
 
 
 # ------------------------------------------------------------------------------------------ library
