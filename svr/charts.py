@@ -25,7 +25,7 @@ from pptx.util import Inches, Pt
 FONT = "Assistant"
 MIN_N = 30                  # same threshold as the workbook (svr/report.py)
 MAX_ITEMS = 15              # answer bars per chart (summaries are always shown)
-DEFAULT_COLOR = "#775F76"
+DEFAULT_COLOR = "#1F3864"          # dark blue = the workbook navy (svr/report.py)
 SORTED_TYPES = ("multi", "coded_open")      # unordered answers: biggest first; scales keep the questionnaire order
 LEVEL_FALLBACK = "מדגם"
 CHART_TYPES = {"bar_h": "עמודות אופקיות", "bar_v": "עמודות אנכיות", "stacked": "עמודה מוערמת 100%", "donut": "דונאט"}
