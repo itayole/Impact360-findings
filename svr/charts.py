@@ -248,22 +248,17 @@ def _donut(ch, spec):
     _font(ch.legend.font, 16, False, "404040")
 
 
+def question_footer(spec):
+    """Grey 8pt line at the bottom of the slide: the question as asked, and its number / variable."""
+    ident = spec["dict_var"] if spec["key"] == spec["dict_var"] else f"{spec['key']} / {spec['dict_var']}"
+    return f"{spec['title']}  |  {ident}"
+
+
 def _add_slide(prs, layout, spec, k):
     slide = prs.slides.add_slide(layout)
-    title_ph = next((ph for ph in slide.placeholders if "TITLE" in str(ph.placeholder_format.type) and "SUB" not in str(ph.placeholder_format.type)), None)
-    for ph in list(slide.placeholders):                    # client layouts: keep the title, drop empty body/date/footer boxes
-        if title_ph is None or ph._element is not title_ph._element:
-            ph._element.getparent().remove(ph._element)
-    if title_ph is not None:                               # inherits the client's title formatting
-        tf = title_ph.text_frame
-        tf.text = spec["title"]
-        _rtl_paragraph(tf.paragraphs[0])
-        for r in tf.paragraphs[0].runs:
-            r.font._rPr.set("lang", "he-IL")
-        top_chart = max(1.65 * k, (title_ph.top + title_ph.height) / 914400 + 0.1)
-    else:
-        _textbox(slide, 0.6, 0.35, 12.1, 1.2, spec["title"], 24, True, "333333", k)
-        top_chart = 1.65 * k
+    for ph in list(slide.placeholders):                    # client layouts: the slide carries only the chart and the footers (no empty boxes)
+        ph._element.getparent().remove(ph._element)
+    top_chart = 0.5 * k
     bottom = 6.7 * k
     cd = CategoryChartData()
     ctype = spec["chart_type"]
@@ -310,9 +305,10 @@ def _add_slide(prs, layout, spec, k):
         note += f" · תשובות מתחת ל-{spec['min_pct']:g}% לא מוצגות ({spec['hidden_low']})"
     if spec["truncated"]:
         note += f" · מוצגות {MAX_ITEMS} תשובות מתוך {MAX_ITEMS + spec['truncated']}"
-    _textbox(slide, 0.6, 6.8, 9.0, 0.45, note, 12, False, "7F7F7F", k)
+    _textbox(slide, 0.6, 6.75, 9.0, 0.35, note, 12, False, "7F7F7F", k)
     if spec["low_base"]:
-        _textbox(slide, 9.6, 6.8, 3.1, 0.45, f"⚠ בסיס נמוך מ-{MIN_N}", 12, True, "C00000", k)
+        _textbox(slide, 9.6, 6.75, 3.1, 0.35, f"⚠ בסיס נמוך מ-{MIN_N}", 12, True, "C00000", k)
+    _textbox(slide, 0.6, 7.1, 12.1, 0.3, question_footer(spec), 8, False, "808080", k)      # question wording + number / variable
 
 
 # ------------------------------------------------------------------------------------------ client base file

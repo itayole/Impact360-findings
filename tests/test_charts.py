@@ -110,7 +110,7 @@ def test_client_base_design_is_used_pptx_and_potx():
         assert len(prs.slides) == 2                              # 2 questions, the 2 sample slides are gone
         assert prs.slide_width == Inches(10)                     # client's slide size kept
         sl = prs.slides[0]
-        assert sl.shapes.title is not None and sl.shapes.title.text_frame.text.startswith("עד כמה")
+        assert sl.shapes.title is None and not sl.placeholders          # no empty client placeholders left on the slide
         assert any(sh.has_chart for sh in sl.shapes)
 
 
@@ -161,3 +161,15 @@ def test_min_pct_threshold_applies_to_open_and_long_answer_lists():
     assert CH.clean_settings(dict(defaults=dict(min_pct=250)))["defaults"]["min_pct"] == 100
     prs = Presentation(io.BytesIO(CH.render_pptx(s)))
     assert any("לא מוצגות" in sh.text_frame.text for sh in prs.slides[0].shapes if sh.has_text_frame)
+
+
+def test_question_and_variable_are_in_a_grey_8pt_footer():
+    prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(RESULTS))))
+    for sl in prs.slides:
+        foot = [sh for sh in sl.shapes if sh.has_text_frame and " | " in sh.text_frame.text]
+        assert len(foot) == 1 and foot[0].top > Inches(7.0)                        # bottom of the slide
+        run = foot[0].text_frame.paragraphs[0].runs[0]
+        assert run.font.size.pt == 8 and str(run.font.color.rgb) == "808080"
+    t0 = [sh for sh in prs.slides[0].shapes if sh.has_text_frame and " | " in sh.text_frame.text][0].text_frame.text
+    assert t0 == "עד כמה המותג אמין בעיניך?  |  CRED"
+    assert CH.question_footer(dict(title="ש", key="q31", dict_var="CAT")) == "ש  |  q31 / CAT"
