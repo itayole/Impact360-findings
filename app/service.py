@@ -109,6 +109,11 @@ def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id
         if not t:
             raise Bad("התבנית לא נמצאה")
         T.apply_template(mapping, t)
+        tb = os.path.join(lib.tdir, template_id, "charts_base.pptx")
+        if os.path.exists(tb):
+            shutil.copyfile(tb, store.charts_base_path(pid))        # the client's chart design comes with the template
+        elif (mapping.get("charts") or {}).get("base_name"):
+            mapping["charts"].pop("base_name")
         _log(mapping, user, "template", f"הוחלה התבנית '{t['name']}' v{t['version']}")
     p.update(brand=brand, campaign_id=campaign_id, omnibus=bool(omnibus), stage="reviewed" if template_id else "profiled",
              template=dict(id=template_id, version=template_version) if template_id else None)
@@ -337,14 +342,59 @@ def results(store, pid):
 
 
 def charts(store, pid):
-    """One chart spec per question (sample level), drawn from the same findings tables as the workbook."""
-    return CH.build_specs(results(store, pid))
+    """Chart specs (one per question, sample level, same findings tables as the workbook) + the saved chart settings."""
+    mapping = _mapping(store, pid)
+    st = CH.clean_settings(mapping.get("charts"))
+    has_base = os.path.exists(store.charts_base_path(pid))
+    return dict(settings=st, specs=CH.build_specs(results(store, pid), st), types=CH.CHART_TYPES, default_color=CH.DEFAULT_COLOR,
+                base_name=st.get("base_name", "") if has_base else "")
+
+
+def save_chart_settings(store, pid, raw):
+    mapping = _mapping(store, pid)
+    st = CH.clean_settings(raw)
+    if (mapping.get("charts") or {}).get("base_name"):
+        st["base_name"] = mapping["charts"]["base_name"]        # the design file is changed only through its own endpoint
+    mapping["charts"] = st
+    store.save_mapping(pid, mapping)
+    return st
+
+
+def set_chart_base(store, pid, tmp_path, filename, user=""):
+    """The client's PowerPoint design file (master / layouts / theme) the charts deck is built on."""
+    mapping = _mapping(store, pid)
+    with open(tmp_path, "rb") as f:
+        data = f.read()
+    try:
+        w, h, layouts = CH.check_base(data)
+    except CH.BaseError as e:
+        raise Bad(str(e))
+    with open(store.charts_base_path(pid), "wb") as f:
+        f.write(data)
+    mapping.setdefault("charts", CH.clean_settings(None))["base_name"] = (filename or "design.pptx")[:200]
+    _log(mapping, user, "charts", f"נטען קובץ עיצוב לגרפים: {filename}")
+    store.save_mapping(pid, mapping)
+    return dict(base_name=mapping["charts"]["base_name"], width=w, height=h, layouts=layouts)
+
+
+def remove_chart_base(store, pid, user=""):
+    mapping = _mapping(store, pid)
+    if os.path.exists(store.charts_base_path(pid)):
+        os.remove(store.charts_base_path(pid))
+    (mapping.get("charts") or {}).pop("base_name", None)
+    _log(mapping, user, "charts", "הוסר קובץ העיצוב של הגרפים")
+    store.save_mapping(pid, mapping)
 
 
 def charts_pptx(store, pid):
     """(bytes, filename) of the charts deck."""
     p = store.project(pid)
-    data = CH.render_pptx(charts(store, pid))
+    c = charts(store, pid)
+    base = None
+    if os.path.exists(store.charts_base_path(pid)):
+        with open(store.charts_base_path(pid), "rb") as f:
+            base = f.read()
+    data = CH.render_pptx(c["specs"], base)
     name = (store.mapping(pid) or {}).get("project", {}).get("name") or p["name"] or "Impact360"
     return data, f"{name}_CHARTS.pptx"
 
@@ -484,6 +534,11 @@ def save_template(store, pid, name, user="", client="", tracker="", template_id=
     fp = T.fingerprint(None, meta) if meta is not None else store.load_json(pid, "fingerprint.json", [])
     lib = T.Library(store.library)
     t = lib.save(name, mapping, fp, user=user, client=client, tracker=tracker, template_id=template_id)
+    tb = os.path.join(lib.tdir, t["id"], "charts_base.pptx")        # latest design file of the template (not versioned)
+    if os.path.exists(store.charts_base_path(pid)):
+        shutil.copyfile(store.charts_base_path(pid), tb)
+    elif os.path.exists(tb):
+        os.remove(tb)
     _log(mapping, user, "template", f"נשמרה תבנית '{t['name']}' v{t['version']}")
     store.save_mapping(pid, mapping)
     return dict(id=t["id"], version=t["version"], changes=t["changes"])

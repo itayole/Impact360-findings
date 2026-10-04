@@ -175,6 +175,8 @@ def diff_mappings(old, new):
     for part in ("exposure", "customer"):
         if json.dumps(old.get(part), sort_keys=True) != json.dumps(new.get(part), sort_keys=True):
             out.append(f"שונתה הגדרת {'החשיפה' if part == 'exposure' else 'הלקוחות'}")
+    if json.dumps(old.get("charts"), sort_keys=True) != json.dumps(new.get("charts"), sort_keys=True):
+        out.append("שונו הגדרות הגרפים (סוג גרף / צבעים / קובץ עיצוב)")
     return out or ["ללא שינוי"]
 
 
@@ -218,6 +220,8 @@ def apply_template(mapping, template):
     for part in ("exposure", "customer"):
         if tm.get(part) is not None:
             mapping[part] = copy.deepcopy(tm[part])
+    if tm.get("charts"):
+        mapping["charts"] = copy.deepcopy(tm["charts"])          # chart type / colours per question travel with the tracker
     if tm.get("segments") is not None:
         mapping["segments"] = copy.deepcopy(tm["segments"])      # extra columns travel with the tracker
     mapping["project"]["weight_var"] = tm.get("project", {}).get("weight_var") or mapping["project"].get("weight_var")

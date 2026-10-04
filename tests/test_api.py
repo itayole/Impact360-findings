@@ -88,9 +88,22 @@ def test_full_flow(client):
     data = {r[4]: r[3] for r in wb["DATA_לייבוא"].iter_rows(min_row=2, values_only=True) if r[4]}
     assert data["SEMIAEX-CAT#01"] == 37.4 and data["UNEXPOSEB#01"] == 36.0 and data["SEMIAEX-VD#01"] == 29.6
     # charts: same numbers as the findings tables, exported as a native pptx
-    specs = client.get(f"/api/projects/{pid}/charts").json()
-    slog = next(s for s in specs if s["dict_var"] == "SLOGAN")
+    ch = client.get(f"/api/projects/{pid}/charts").json()
+    slog = next(s for s in ch["specs"] if s["dict_var"] == "SLOGAN")
     assert any(c["label"] and round(c["value"], 1) == 24.9 for c in slog["categories"])
+    # chart choices are saved with the project, validated, and travel with the template
+    st = client.put(f"/api/projects/{pid}/charts/settings", json=dict(
+        defaults=dict(chart_type="bar_v", color="#112233"), questions={slog["key"]: dict(chart_type="donut", include=False), "x": 1})).json()
+    assert st["defaults"] == dict(chart_type="bar_v", color="#112233") and st["questions"] == {slog["key"]: dict(chart_type="donut", include=False)}
+    ch2 = client.get(f"/api/projects/{pid}/charts").json()
+    assert next(s for s in ch2["specs"] if s["key"] == slog["key"])["include"] is False and ch2["specs"][0]["color"] == "#112233"
+    assert client.post(f"/api/projects/{pid}/charts/base", files={"file": ("x.pptx", b"junk", "application/octet-stream")}).status_code == 400
+    assert client.post(f"/api/projects/{pid}/charts/base", files={"file": ("x.txt", b"junk", "text/plain")}).status_code == 400
+    from pptx import Presentation
+    bb = io.BytesIO()
+    Presentation().save(bb)
+    r = client.post(f"/api/projects/{pid}/charts/base", files={"file": ("client.potx", bb.getvalue(), "application/octet-stream")})
+    assert r.status_code == 200 and client.get(f"/api/projects/{pid}/charts").json()["base_name"] == "client.potx"
     px = client.get(f"/api/projects/{pid}/charts.pptx")
     assert px.status_code == 200 and px.content[:2] == b"PK" and "pptx" in px.headers["content-disposition"]
     if os.environ.get("SAVE_CHARTS_PPTX"):
@@ -111,6 +124,8 @@ def test_full_flow(client):
     rv2 = client.post(f"/api/projects/{pid2}/profile", json={"brand": "האגיס", "template_id": "Huggies_FF"}).json()
     assert rv2["pending"] == []                             # wave 2: zero manual approvals (spec 11.3: < 5)
     assert rv2["mapping"]["template_diff"]["missing"] == []
+    c2 = client.get(f"/api/projects/{pid2}/charts").json()                 # wave 2 inherits chart choices + the client's design file
+    assert c2["settings"]["defaults"]["color"] == "#112233" and c2["base_name"] == "client.potx"
 
 
 @needs_golden

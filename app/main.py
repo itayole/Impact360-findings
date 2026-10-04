@@ -196,6 +196,33 @@ def charts(pid: str):
     return service.charts(store, pid)
 
 
+@app.put("/api/projects/{pid}/charts/settings")
+def charts_settings(pid: str, body: dict = Body(...)):
+    store.project(pid)
+    return service.save_chart_settings(store, pid, body)
+
+
+@app.post("/api/projects/{pid}/charts/base")
+async def charts_base(pid: str, request: Request, file: UploadFile = File(...)):
+    store.project(pid)
+    fn = file.filename or ""
+    if not fn.lower().endswith((".pptx", ".potx")):
+        raise service.Bad("יש להעלות קובץ .pptx או .potx")
+    path = await _save_upload(file, ".pptx")
+    try:
+        return service.set_chart_base(store, pid, path, fn, user_of(request))
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+
+
+@app.delete("/api/projects/{pid}/charts/base")
+def charts_base_delete(pid: str, request: Request):
+    store.project(pid)
+    service.remove_chart_base(store, pid, user_of(request))
+    return dict(ok=True)
+
+
 @app.get("/api/projects/{pid}/charts.pptx")
 def charts_pptx(pid: str):
     store.project(pid)

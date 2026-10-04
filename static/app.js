@@ -651,17 +651,59 @@ function svgEl(tag, attrs, text) {
   if (text != null) el.textContent = text;
   return el;
 }
-/* Horizontal bars, RTL: answer labels on the right, bars grow leftwards, value at the bar end (same look as the PPTX). */
+/* Same tint formula as svr/charts.py::shades (pies / stacked bars): darkest first. Presentation only. */
+function shades(color, n) {
+  const rgb = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+  return Array.from({ length: n }, (_, i) => { const t = 0.65 * i / Math.max(n - 1, 1); return '#' + rgb.map(c => Math.round(c + (255 - c) * t).toString(16).padStart(2, '0')).join('').toUpperCase(); });
+}
+const chartParts = spec => { const it = spec.categories.filter(c => !c.headline); return it.length ? it : spec.categories; };
+/* Previews mirror the PPTX: RTL (answer labels on the right, first answer on the right / top). */
 function drawChart(spec) {
+  const T = spec.chart_type, svg0 = (W, H) => svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', direction: 'rtl', style: 'font-family:Assistant,sans-serif;background:#fff' });
+  const pct = v => Math.round(v) + '%';
+  if (T === 'bar_v') {
+    const cats = spec.categories, W = 820, H = 380, slot = (W - 40) / cats.length, bw = Math.min(70, slot * 0.6), plotH = 270;
+    const top = Math.max(...cats.map(c => c.value)), max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), svg = svg0(W, H);
+    cats.forEach((c, i) => {
+      const cx = W - 20 - (i + 0.5) * slot, hgt = Math.max(2, c.value / max * plotH);
+      svg.append(svgEl('rect', { x: cx - bw / 2, y: 30 + plotH - hgt, width: bw, height: hgt, fill: spec.color }));
+      svg.append(svgEl('text', { x: cx, y: 24 + plotH - hgt, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, pct(c.value)));
+      svg.append(svgEl('text', { x: cx, y: 30 + plotH + 24, 'text-anchor': 'middle', 'font-size': 14, fill: '#404040' }, c.label.length > 16 ? c.label.slice(0, 15) + '…' : c.label));
+    });
+    return svg;
+  }
+  if (T === 'stacked' || T === 'donut') {
+    const parts = chartParts(spec), cols = shades(spec.color, parts.length), tot = parts.reduce((a, c) => a + c.value, 0) || 1;
+    const legendRows = parts.length, W = 820;
+    const legend = (svg, x0, y0, rowH) => parts.forEach((c, i) => {
+      svg.append(svgEl('rect', { x: x0 - 16, y: y0 + i * rowH, width: 16, height: 16, fill: cols[i] }));
+      svg.append(svgEl('text', { x: x0 - 24, y: y0 + i * rowH + 14, 'text-anchor': 'end', 'font-size': 16, fill: '#404040' }, c.label));
+    });
+    if (T === 'stacked') {
+      const H = 130 + legendRows * 26, svg = svg0(W, H); let x = W - 20;
+      parts.forEach((c, i) => { const w = c.value / tot * (W - 40); x -= w;
+        svg.append(svgEl('rect', { x, y: 20, width: w, height: 80, fill: cols[i] }));
+        if (w > 36) svg.append(svgEl('text', { x: x + w / 2, y: 68, 'text-anchor': 'middle', 'font-size': 18, 'font-weight': 700, fill: '#fff' }, pct(c.value))); });
+      legend(svg, W - 20, 120, 26);
+      return svg;
+    }
+    const H = Math.max(300, legendRows * 28 + 30), svg = svg0(W, H), cx = 170, cy = H / 2, r = 100, circ = 2 * Math.PI * r; let off = 0;
+    parts.forEach((c, i) => { const len = c.value / tot * circ;
+      svg.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: cols[i], 'stroke-width': 52, 'stroke-dasharray': `${len} ${circ - len}`, 'stroke-dashoffset': -off, transform: `rotate(-90 ${cx} ${cy})` }));
+      const ang = (off + len / 2) / circ * 2 * Math.PI - Math.PI / 2;
+      if (len > 24) svg.append(svgEl('text', { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) + 6, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700, fill: '#fff' }, pct(c.value)));
+      off += len; });
+    legend(svg, W - 20, (H - legendRows * 28) / 2, 28);
+    return svg;
+  }
   const W = 820, LABEL = 250, ROW = 46, BAR = 30, PAD = 12, H = spec.categories.length * ROW + PAD * 2;
   const top = Math.max(...spec.categories.map(c => c.value));
-  const max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), room = W - LABEL - 70;
-  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', direction: 'rtl', style: 'font-family:Assistant,sans-serif;background:#fff' });
+  const max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), room = W - LABEL - 70, svg = svg0(W, H);
   spec.categories.forEach((c, i) => {
     const y = PAD + i * ROW, len = Math.max(2, c.value / max * room);
     svg.append(svgEl('text', { x: W - 8, y: y + BAR / 2 + 6, 'text-anchor': 'end', 'font-size': 17, fill: '#404040' }, c.label));
     svg.append(svgEl('rect', { x: W - LABEL - len, y, width: len, height: BAR, fill: spec.color }));
-    svg.append(svgEl('text', { x: W - LABEL - len - 8, y: y + BAR / 2 + 7, 'text-anchor': 'end', 'font-size': 19, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, Math.round(c.value) + '%'));
+    svg.append(svgEl('text', { x: W - LABEL - len - 8, y: y + BAR / 2 + 7, 'text-anchor': 'end', 'font-size': 19, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, pct(c.value)));
   });
   return svg;
 }
@@ -669,19 +711,65 @@ async function viewStep4() {
   setStep(4);
   const main = $('#main'); main.replaceChildren(backBar(viewStep3, 'חזרה להרצה ולתוצאות'), h('h1', null, 'שלב 4 · גרפים'));
   const card = h('div', { class: 'card' }, h('p', { class: 'muted' }, 'טוען גרפים…')); main.append(card);
-  let specs;
-  try { specs = await api(`/projects/${S.project.id}/charts`); } catch (e) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ ' + e.message)); return; }
+  let data;
+  try { data = await api(`/projects/${S.project.id}/charts`); } catch (e) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ ' + e.message)); return; }
+  const specs = data.specs, st = data.settings;
   if (!specs.length) { card.replaceChildren(h('p', { class: 'muted' }, 'אין שאלות שניתן להציג כגרף.')); return; }
-  const list = h('select', { size: 14, style: 'width:100%' }, ...specs.map((s, i) => h('option', { value: i }, `${s.dict_var} · ${s.title}`.slice(0, 90))));
+  const typeOpts = (sel) => Object.entries(data.types).map(([k, v]) => h('option', { value: k, selected: k === sel }, v));
+  /* settings autosave (debounced); the preview is redrawn locally — the numbers never change, only how they are drawn */
+  let timer = null;
+  const save = () => { clearTimeout(timer); timer = setTimeout(() => api(`/projects/${S.project.id}/charts/settings`, { method: 'PUT', json: st }).catch(e => toast('⚠ ' + e.message)), 500); };
+  const apply = s => { const q = st.questions[s.key] || {}; s.chart_type = q.chart_type || st.defaults.chart_type; s.color = q.color || st.defaults.color; s.include = q.include !== false; };
+  const setQ = (s, k, v, reset) => { const q = (st.questions[s.key] = st.questions[s.key] || {}); if (reset) delete q[k]; else q[k] = v; if (!Object.keys(q).length) delete st.questions[s.key]; apply(s); save(); };
+
+  const defType = h('select', null, typeOpts(st.defaults.chart_type));
+  const defColor = h('input', { type: 'color', value: st.defaults.color });
+  const applyAll = h('button', { class: 'btn small ghost' }, 'החל על כל השאלות');
+  const sel = h('select', { size: 14, style: 'width:100%' });
   const view = h('div'); const info = h('div', { class: 'muted' });
-  const show = i => { const s = specs[i]; view.replaceChildren(h('b', null, s.title), drawChart(s));
+  const qType = h('select'); const qColor = h('input', { type: 'color' }); const qInc = h('input', { type: 'checkbox' });
+  let cur = 0;
+  const label = s => `${s.include ? '' : '⛔ '}${s.dict_var} · ${s.title}`.slice(0, 90);
+  const refreshList = () => specs.forEach((s, i) => { sel.options[i].textContent = label(s); });
+  const draw = () => view.replaceChildren(h('b', null, specs[cur].title), drawChart(specs[cur]));
+  const show = i => { cur = i; const s = specs[i]; apply(s); draw();
+    qType.replaceChildren(...typeOpts(s.chart_type)); qColor.value = s.color; qInc.checked = s.include;
     info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
-  list.onchange = () => show(+list.value);
+  specs.forEach(s => { apply(s); sel.append(h('option', { value: specs.indexOf(s) }, label(s))); });
+  sel.onchange = () => show(+sel.value);
+  qType.onchange = () => { setQ(specs[cur], 'chart_type', qType.value, qType.value === st.defaults.chart_type); draw(); };
+  qColor.oninput = () => { setQ(specs[cur], 'color', qColor.value, qColor.value === st.defaults.color); draw(); };
+  qInc.onchange = () => { setQ(specs[cur], 'include', false, qInc.checked); refreshList(); };
+  const redrawAll = () => { specs.forEach(apply); refreshList(); show(cur); };
+  defType.onchange = () => { st.defaults.chart_type = defType.value; save(); redrawAll(); };
+  defColor.oninput = () => { st.defaults.color = defColor.value; save(); redrawAll(); };
+  applyAll.onclick = async () => {
+    if (!await askConfirm('לאפס את ההתאמות שנעשו לשאלות בודדות ולהחיל את ברירת המחדל על כולן?')) return;
+    st.questions = Object.fromEntries(Object.entries(st.questions).filter(([, q]) => q.include === false).map(([k]) => [k, { include: false }])); save(); redrawAll();
+  };
+
+  /* the client's own PowerPoint (master, layouts, logo, theme) — the charts are added into it */
+  const noBase = 'ללא קובץ עיצוב (מצגת 16:9 רגילה)';
+  const baseLbl = h('span', { class: 'muted' }, data.base_name ? `קובץ עיצוב: ${data.base_name}` : noBase);
+  const up = h('input', { type: 'file', accept: '.pptx,.potx' }); const upBtn = h('button', { class: 'btn small' }, 'טען קובץ עיצוב');
+  const rmBtn = h('button', { class: 'btn small ghost', style: data.base_name ? '' : 'display:none' }, 'הסר');
+  upBtn.onclick = () => guarded(upBtn, async () => {
+    if (!up.files[0]) throw new Error('בחר/י קובץ .pptx / .potx');
+    const fd = new FormData(); fd.append('file', up.files[0]);
+    const r = await fetch('api/projects/' + S.project.id + '/charts/base', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
+    const d = await r.json(); if (!r.ok) throw new Error(d.detail);
+    baseLbl.textContent = `קובץ עיצוב: ${d.base_name} (${d.width}×${d.height} אינץ׳, ${d.layouts.length} פריסות)`; rmBtn.style.display = '';
+  });
+  rmBtn.onclick = () => guarded(rmBtn, async () => { await api(`/projects/${S.project.id}/charts/base`, { method: 'DELETE' }); baseLbl.textContent = noBase; rmBtn.style.display = 'none'; });
+
   const dl = h('a', { class: 'btn gold', href: `api/projects/${S.project.id}/charts.pptx` }, '⬇ הורד מצגת PPTX');
-  card.replaceChildren(h('p', { class: 'muted' }, `${specs.length} גרפים · רמת מדגם · גרף נייטיבי של PowerPoint לכל שאלה (ניתן לעריכה)`), dl,
-    h('div', { class: 'row', style: 'align-items:flex-start;margin-top:12px' }, h('div', { style: 'flex:1;min-width:260px' }, list), h('div', { style: 'flex:2;min-width:340px' }, view, info)),
+  card.replaceChildren(h('p', { class: 'muted' }, `${specs.length} גרפים · רמת מדגם · גרף נייטיבי של PowerPoint לכל שאלה (ניתן לעריכה). ההגדרות נשמרות אוטומטית ויישמרו עם התבנית (שלב 5).`),
+    h('div', { class: 'row' }, h('label', { class: 'f' }, 'סוג גרף (ברירת מחדל)', defType), h('label', { class: 'f' }, 'צבע', defColor), applyAll, dl),
+    h('div', { class: 'row', style: 'margin-top:10px' }, up, upBtn, rmBtn, baseLbl),
+    h('div', { class: 'row', style: 'align-items:flex-start;margin-top:12px' }, h('div', { style: 'flex:1;min-width:260px' }, sel),
+      h('div', { style: 'flex:2;min-width:340px' }, h('div', { class: 'row', style: 'margin-bottom:8px' }, h('label', { class: 'f' }, 'סוג גרף לשאלה', qType), h('label', { class: 'f' }, 'צבע', qColor), h('label', { class: 'f' }, 'לכלול במצגת', qInc)), view, info)),
     h('div', { style: 'margin-top:12px' }, h('button', { class: 'btn ghost', onclick: () => viewStep5() }, 'שמור כתבנית לגל הבא ←')));
-  list.value = '0'; show(0);
+  sel.value = '0'; show(0);
 }
 
 /* ------------------------------------------------------------------ step 5 */

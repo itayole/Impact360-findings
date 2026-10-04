@@ -2,6 +2,7 @@
 import io
 
 from pptx import Presentation
+from pptx.util import Inches
 
 from svr import charts as CH
 
@@ -47,3 +48,73 @@ def test_pptx_opens_and_has_native_chart_per_question():
     chart = next(sh.chart for sh in shapes if sh.has_chart)
     assert list(chart.plots[0].categories)[0] == "סה״כ אמין"
     assert any("בסיס" in sh.text_frame.text for sh in shapes if sh.has_text_frame)
+
+
+def _kinds(prs, i=0):
+    return [sh.chart.chart_type for sh in prs.slides[i].shapes if sh.has_chart]
+
+
+def test_settings_cleaning_and_per_question_overrides():
+    st = CH.clean_settings(dict(defaults=dict(chart_type="nope", color="red"),
+                                questions={"CRED": dict(chart_type="donut", color="#112233"), "USAGE": dict(include=False, chart_type="x"), "Z": 5}))
+    assert st["defaults"] == dict(chart_type="bar_h", color=CH.DEFAULT_COLOR)
+    assert st["questions"] == {"CRED": dict(chart_type="donut", color="#112233"), "USAGE": dict(include=False)}
+    a, b = CH.build_specs(RESULTS, st)
+    assert (a["chart_type"], a["color"], a["include"]) == ("donut", "#112233", True)
+    assert (b["chart_type"], b["include"]) == ("bar_h", False)
+
+
+def test_every_chart_type_renders_and_excluded_questions_are_skipped():
+    from pptx.enum.chart import XL_CHART_TYPE as T
+    want = {"bar_h": T.BAR_CLUSTERED, "bar_v": T.COLUMN_CLUSTERED, "stacked": T.BAR_STACKED_100, "donut": T.DOUGHNUT}
+    for ct, kind in want.items():
+        specs = CH.build_specs(RESULTS, dict(defaults=dict(chart_type=ct, color="#336699"), questions={"USAGE": dict(include=False)}))
+        prs = Presentation(io.BytesIO(CH.render_pptx(specs)))
+        assert len(prs.slides) == 1 and _kinds(prs) == [kind], ct
+    # pie / stacked show the answers only (a headline net would double count them)
+    prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(RESULTS, dict(defaults=dict(chart_type="donut"))))))
+    ch = next(sh.chart for sh in prs.slides[0].shapes if sh.has_chart)
+    assert "סה״כ אמין" not in list(ch.plots[0].categories) and len(list(ch.plots[0].categories)) == 5
+
+
+def test_shades_darkest_first():
+    s = CH.shades("#000000", 3)
+    assert s[0] == "#000000" and s[0] < s[1] < s[2]
+
+
+def _client_base(potx=False):
+    import zipfile
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(10), Inches(5.625)
+    for _ in range(2):
+        prs.slides.add_slide(prs.slide_layouts[5])              # client's own sample slides must not leak into the output
+    buf = io.BytesIO()
+    prs.save(buf)
+    data = buf.getvalue()
+    if potx:
+        out = io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(data)) as zi, zipfile.ZipFile(out, "w") as zo:
+            for it in zi.infolist():
+                b = zi.read(it.filename)
+                zo.writestr(it, b.replace(b"presentationml.presentation.main+xml", b"presentationml.template.main+xml") if it.filename == "[Content_Types].xml" else b)
+        data = out.getvalue()
+    return data
+
+
+def test_client_base_design_is_used_pptx_and_potx():
+    from pptx.util import Inches
+    for potx in (False, True):
+        base = _client_base(potx)
+        assert CH.check_base(base)[:2] == (10.0, 5.62) or CH.check_base(base)[0] == 10.0
+        prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(RESULTS), base=base)))
+        assert len(prs.slides) == 2                              # 2 questions, the 2 sample slides are gone
+        assert prs.slide_width == Inches(10)                     # client's slide size kept
+        sl = prs.slides[0]
+        assert sl.shapes.title is not None and sl.shapes.title.text_frame.text.startswith("עד כמה")
+        assert any(sh.has_chart for sh in sl.shapes)
+
+
+def test_bad_base_file_is_rejected():
+    import pytest
+    with pytest.raises(CH.BaseError):
+        CH.check_base(b"not a pptx")

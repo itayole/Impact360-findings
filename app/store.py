@@ -136,6 +136,9 @@ class Store:
         with _LOCK:
             _write(os.path.join(self.pdir(pid), "mapping.json"), mapping)
 
+    def charts_base_path(self, pid):
+        return os.path.join(self.pdir(pid), "charts_base.pptx")
+
     def output_path(self, pid):
         return os.path.join(self.pdir(pid), "output.xlsx")
 

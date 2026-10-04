@@ -1,21 +1,26 @@
 """Charts from findings tables (pure functions; aggregates only, never respondent data).
 
-build_specs(results)  -> one chart spec per question, from the `preview.results_tables` payload
-render_pptx(specs)    -> native (editable) PowerPoint charts, one slide per question, Hebrew / RTL
+build_specs(results, settings)  -> one chart spec per question, from the `preview.results_tables` payload
+render_pptx(specs, base=None)   -> native (editable) PowerPoint charts, one slide per question, Hebrew / RTL;
+                                   `base` = bytes of the client's .pptx/.potx whose master/layouts/theme are reused
 
 The module never recomputes methodology: every value comes from the findings tables as they are.
+`settings` = {"defaults": {"chart_type", "color"}, "questions": {table_key: {"chart_type", "color", "include"}}}
+(stored in mapping["charts"], so it travels with the client template).
 """
 import io
 import math
+import re
+import zipfile
 
+from lxml import etree
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
+from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
 from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
-from lxml import etree
 
 FONT = "Assistant"
 MIN_N = 30                  # same threshold as the workbook (svr/report.py)
@@ -23,10 +28,51 @@ MAX_ITEMS = 15              # answer bars per chart (summaries are always shown)
 DEFAULT_COLOR = "#775F76"
 SORTED_TYPES = ("multi", "coded_open")      # unordered answers: biggest first; scales keep the questionnaire order
 LEVEL_FALLBACK = "מדגם"
+CHART_TYPES = {"bar_h": "עמודות אופקיות", "bar_v": "עמודות אנכיות", "stacked": "עמודה מוערמת 100%", "donut": "דונאט"}
+DEFAULT_TYPE = "bar_h"
+_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+_W, _H = 13.333, 7.5        # layout coordinates below are for a 16:9 slide, scaled to the actual slide size
 
 
-def build_specs(results, level="sample", color=DEFAULT_COLOR):
+def clean_settings(raw):
+    """Validated copy of user settings (unknown keys / bad values dropped)."""
+    raw = raw or {}
+    d = raw.get("defaults") or {}
+    out = dict(defaults=dict(chart_type=d.get("chart_type") if d.get("chart_type") in CHART_TYPES else DEFAULT_TYPE,
+                             color=d.get("color") if _HEX.match(str(d.get("color") or "")) else DEFAULT_COLOR),
+               questions={})
+    for k, q in (raw.get("questions") or {}).items():
+        if not isinstance(q, dict):
+            continue
+        o = {}
+        if q.get("chart_type") in CHART_TYPES:
+            o["chart_type"] = q["chart_type"]
+        if _HEX.match(str(q.get("color") or "")):
+            o["color"] = q["color"]
+        if q.get("include") is False:
+            o["include"] = False
+        if o:
+            out["questions"][str(k)] = o
+    for k in ("base_name",):
+        if raw.get(k):
+            out[k] = str(raw[k])[:200]
+    return out
+
+
+def shades(color, n):
+    """n tints of `color` (darkest first) for pies / stacked bars. Same formula as the browser preview (static/app.js)."""
+    h = color.lstrip("#")
+    rgb = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+    out = []
+    for i in range(n):
+        t = 0.65 * i / max(n - 1, 1)
+        out.append("#" + "".join(f"{round(c + (255 - c) * t):02X}" for c in rgb))
+    return out
+
+
+def build_specs(results, settings=None, level="sample"):
     """Chart spec per question that has at least one percentage row with a value at `level`."""
+    st = clean_settings(settings)
     names = {c["key"]: c["name"] for c in results.get("columns", [])}
     out = []
     for t in results["tables"]:
@@ -45,10 +91,18 @@ def build_specs(results, level="sample", color=DEFAULT_COLOR):
         cats = [dict(label=r["label"], value=r["values"][level], headline=True) for r in head]
         cats += [dict(label=r["label"], value=r["values"][level], headline=False) for r in items]
         base = next((r["n"].get(level) for r in head + items if r["n"].get(level)), None)
+        q = st["questions"].get(t["key"], {})
         out.append(dict(key=t["key"], title=t.get("question") or t["title"], dict_var=t["dict_var"], type=t.get("type"),
-                        chart_type="bar_h", color=color, level=level, level_name=names.get(level, LEVEL_FALLBACK),
+                        chart_type=q.get("chart_type", st["defaults"]["chart_type"]), color=q.get("color", st["defaults"]["color"]),
+                        include=q.get("include", True), level=level, level_name=names.get(level, LEVEL_FALLBACK),
                         base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, categories=cats))
     return out
+
+
+def _parts(spec):
+    """Categories drawn by pie / stacked charts: the answers only (a headline net would double count them)."""
+    items = [c for c in spec["categories"] if not c["headline"]]
+    return items or spec["categories"]
 
 
 # ------------------------------------------------------------------------------------------ pptx
@@ -68,13 +122,17 @@ def _font(font, size, bold=False, color="404040"):
     etree.SubElement(rpr, qn("a:cs")).set("typeface", FONT)
 
 
-def _textbox(slide, x, y, w, h, text, size, bold=False, color="404040"):
-    tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+def _rtl_paragraph(p):
+    p.alignment = PP_ALIGN.RIGHT
+    p._p.get_or_add_pPr().set("rtl", "1")
+
+
+def _textbox(slide, x, y, w, h, text, size, bold=False, color="404040", k=1.0):
+    tb = slide.shapes.add_textbox(Inches(x * k), Inches(y * k), Inches(w * k), Inches(h * k))
     tf = tb.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.RIGHT
-    p._p.get_or_add_pPr().set("rtl", "1")
+    _rtl_paragraph(p)
     r = p.add_run()
     r.text = text
     _font(r.font, size, bold, color)
@@ -82,10 +140,10 @@ def _textbox(slide, x, y, w, h, text, size, bold=False, color="404040"):
     return tb
 
 
-def _point_label_bold(point):
+def _point_label_bold(point, size):
     """Bold, linked '0"%"' label for one point (python-pptx has no per-point number format)."""
     dl = point.data_label
-    _font(dl.font, 16, True, "404040")
+    _font(dl.font, size, True, "404040")
     dl.position = XL_LABEL_POSITION.OUTSIDE_END
     d = dl._dLbl
     if d.find(qn("c:numFmt")) is None:
@@ -95,17 +153,8 @@ def _point_label_bold(point):
         d.find(qn("c:spPr") if d.find(qn("c:spPr")) is not None else qn("c:txPr")).addprevious(nf)   # schema order: numFmt, spPr, txPr
 
 
-def _add_slide(prs, spec):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    _textbox(slide, 0.6, 0.35, 12.1, 1.2, spec["title"], 24, True, "333333")
-    cd = CategoryChartData()
-    cd.categories = [c["label"] for c in spec["categories"]]
-    cd.add_series(spec["level_name"], [c["value"] for c in spec["categories"]])
-    gf = slide.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(0.6), Inches(1.65), Inches(12.1), Inches(5.0), cd)
-    ch = gf.chart
-    ch.has_legend = False
-    ch.has_title = False
-    ch.font.name = FONT
+def _bars(ch, spec, vertical):
+    cats = spec["categories"]
     plot = ch.plots[0]
     plot.gap_width = 70
     plot.vary_by_categories = False
@@ -117,36 +166,186 @@ def _add_slide(prs, spec):
     dls.number_format = '0"%"'
     dls.number_format_is_linked = False
     dls.position = XL_LABEL_POSITION.OUTSIDE_END
-    _font(dls.font, 16, False, "595959")
-    for i, c in enumerate(spec["categories"]):
+    size = 14 if vertical else 16
+    _font(dls.font, size, False, "595959")
+    for i, c in enumerate(cats):
         if c["headline"]:
-            _point_label_bold(ser.points[i])
-    top = max(c["value"] for c in spec["categories"])
+            _point_label_bold(ser.points[i], size)
     va, ca = ch.value_axis, ch.category_axis
     va.minimum_scale = 0
-    va.maximum_scale = min(100, math.ceil(top * 1.2 / 10.0) * 10)
+    va.maximum_scale = min(100, math.ceil(max(c["value"] for c in cats) * 1.2 / 10.0) * 10)
     va.has_major_gridlines = False
-    va.reverse_order = True            # RTL: bars grow from the right, the answer labels sit on the right
     va.visible = False
-    ca.reverse_order = True            # first answer on top
+    ca.reverse_order = True            # horizontal: first answer on top; vertical (RTL): first answer on the right
+    if not vertical:
+        va.reverse_order = True        # RTL: bars grow from the right, the answer labels sit on the right
     ca.format.line.fill.background()
     ca.has_major_gridlines = False
-    _font(ca.tick_labels.font, 16, False, "404040")
+    _font(ca.tick_labels.font, 14 if vertical else 16, False, "404040")
+
+
+def _stacked(ch, spec):
+    plot = ch.plots[0]
+    plot.gap_width = 40
+    plot.overlap = 100
+    plot.has_data_labels = True
+    dls = plot.data_labels
+    dls.show_value = True
+    dls.number_format = '0"%"'
+    dls.number_format_is_linked = False
+    dls.position = XL_LABEL_POSITION.CENTER
+    _font(dls.font, 16, True, "FFFFFF")
+    parts = _parts(spec)
+    for s, col in zip(plot.series, shades(spec["color"], len(parts))):
+        s.format.fill.solid()
+        s.format.fill.fore_color.rgb = _rgb(col)
+    va, ca = ch.value_axis, ch.category_axis
+    va.visible = False
+    va.has_major_gridlines = False
+    va.reverse_order = True            # RTL
+    ca.visible = False
+    ch.has_legend = True
+    ch.legend.position = XL_LEGEND_POSITION.BOTTOM
+    ch.legend.include_in_layout = False
+    _font(ch.legend.font, 16, False, "404040")
+
+
+def _donut(ch, spec):
+    plot = ch.plots[0]
+    plot.vary_by_categories = True
+    ser = plot.series[0]
+    parts = _parts(spec)
+    for i, col in enumerate(shades(spec["color"], len(parts))):
+        pt = ser.points[i]
+        pt.format.fill.solid()
+        pt.format.fill.fore_color.rgb = _rgb(col)
+    plot.has_data_labels = True
+    dls = plot.data_labels
+    dls.show_value = True
+    dls.number_format = '0"%"'
+    dls.number_format_is_linked = False
+    _font(dls.font, 16, True, "FFFFFF")
+    ch.has_legend = True
+    ch.legend.position = XL_LEGEND_POSITION.RIGHT
+    ch.legend.include_in_layout = False
+    _font(ch.legend.font, 16, False, "404040")
+
+
+def _add_slide(prs, layout, spec, k):
+    slide = prs.slides.add_slide(layout)
+    title_ph = next((ph for ph in slide.placeholders if "TITLE" in str(ph.placeholder_format.type) and "SUB" not in str(ph.placeholder_format.type)), None)
+    for ph in list(slide.placeholders):                    # client layouts: keep the title, drop empty body/date/footer boxes
+        if title_ph is None or ph._element is not title_ph._element:
+            ph._element.getparent().remove(ph._element)
+    if title_ph is not None:                               # inherits the client's title formatting
+        tf = title_ph.text_frame
+        tf.text = spec["title"]
+        _rtl_paragraph(tf.paragraphs[0])
+        for r in tf.paragraphs[0].runs:
+            r.font._rPr.set("lang", "he-IL")
+        top_chart = max(1.65 * k, (title_ph.top + title_ph.height) / 914400 + 0.1)
+    else:
+        _textbox(slide, 0.6, 0.35, 12.1, 1.2, spec["title"], 24, True, "333333", k)
+        top_chart = 1.65 * k
+    bottom = 6.7 * k
+    cd = CategoryChartData()
+    ctype = spec["chart_type"]
+    if ctype == "stacked":
+        parts = _parts(spec)
+        cd.categories = [spec["level_name"]]
+        for c in parts:
+            cd.add_series(c["label"], [c["value"]])
+        kind = XL_CHART_TYPE.BAR_STACKED_100
+    else:
+        cats = _parts(spec) if ctype == "donut" else spec["categories"]
+        cd.categories = [c["label"] for c in cats]
+        cd.add_series(spec["level_name"], [c["value"] for c in cats])
+        kind = {"bar_h": XL_CHART_TYPE.BAR_CLUSTERED, "bar_v": XL_CHART_TYPE.COLUMN_CLUSTERED, "donut": XL_CHART_TYPE.DOUGHNUT}[ctype]
+    gf = slide.shapes.add_chart(kind, Inches(0.6 * k), Inches(top_chart), Inches(12.1 * k), Inches(bottom - top_chart), cd)
+    ch = gf.chart
+    ch.has_legend = False
+    ch.has_title = False
+    ch.font.name = FONT
+    if ctype in ("bar_h", "bar_v"):
+        _bars(ch, spec, ctype == "bar_v")
+    elif ctype == "stacked":
+        _stacked(ch, spec)
+    else:
+        _donut(ch, spec)
     note = f"בסיס: {spec['level_name']}"
     if spec["base_n"] is not None:
         note += f", N={spec['base_n']}"
     if spec["truncated"]:
         note += f" · מוצגות {MAX_ITEMS} תשובות מתוך {MAX_ITEMS + spec['truncated']}"
-    _textbox(slide, 0.6, 6.8, 9.0, 0.45, note, 12, False, "7F7F7F")
+    _textbox(slide, 0.6, 6.8, 9.0, 0.45, note, 12, False, "7F7F7F", k)
     if spec["low_base"]:
-        _textbox(slide, 9.6, 6.8, 3.1, 0.45, f"⚠ בסיס נמוך מ-{MIN_N}", 12, True, "C00000")
+        _textbox(slide, 9.6, 6.8, 3.1, 0.45, f"⚠ בסיס נמוך מ-{MIN_N}", 12, True, "C00000", k)
 
 
-def render_pptx(specs):
-    prs = Presentation()
-    prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
+# ------------------------------------------------------------------------------------------ client base file
+class BaseError(ValueError):
+    pass
+
+
+def _open_base(data):
+    """Presentation from a client's .pptx or .potx (a template's content type is rewritten so python-pptx accepts it)."""
+    try:
+        zin = zipfile.ZipFile(io.BytesIO(data))
+        ct = zin.read("[Content_Types].xml")
+        if b"presentationml.template.main+xml" in ct:
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    blob = zin.read(item.filename)
+                    if item.filename == "[Content_Types].xml":
+                        blob = blob.replace(b"presentationml.template.main+xml", b"presentationml.presentation.main+xml")
+                    zout.writestr(item, blob)
+            data = buf.getvalue()
+        return Presentation(io.BytesIO(data))
+    except Exception as e:
+        raise BaseError("הקובץ אינו מצגת PowerPoint תקינה (.pptx / .potx)") from e
+
+
+def check_base(data):
+    """Validate an uploaded design file; returns (slide width, height in inches, layout names)."""
+    prs = _open_base(data)
+    return round(prs.slide_width / 914400, 2), round(prs.slide_height / 914400, 2), [l.name for l in prs.slide_layouts]
+
+
+def _clear_slides(prs):
+    lst = prs.slides._sldIdLst
+    for sid in list(lst):
+        prs.part.drop_rel(sid.rId)
+        lst.remove(sid)
+
+
+def _pick_layout(prs):
+    """Title Only if the client's master has one; else the layout with a title and the fewest other placeholders; else the last (blank)."""
+    best, score = None, None
+    for lay in prs.slide_layouts:
+        types = [str(ph.placeholder_format.type) for ph in lay.placeholders]
+        if not any("TITLE" in t and "SUB" not in t for t in types):
+            continue
+        s = len(types) - (10 if "title only" in (lay.name or "").lower() else 0)
+        if score is None or s < score:
+            best, score = lay, s
+    return best or prs.slide_layouts[len(prs.slide_layouts) - 1]
+
+
+def render_pptx(specs, base=None):
+    """One slide per included spec. `base` (bytes) = the client's design file; without it a plain 16:9 deck."""
+    if base:
+        prs = _open_base(base)
+        _clear_slides(prs)
+        layout = _pick_layout(prs)
+    else:
+        prs = Presentation()
+        prs.slide_width, prs.slide_height = Inches(_W), Inches(_H)
+        layout = prs.slide_layouts[6]
+    k = min(prs.slide_width / 914400 / _W, prs.slide_height / 914400 / _H)
     for s in specs:
-        _add_slide(prs, s)
+        if s.get("include", True):
+            _add_slide(prs, layout, s, k)
     buf = io.BytesIO()
     prs.save(buf)
     return buf.getvalue()
