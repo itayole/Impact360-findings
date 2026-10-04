@@ -1,7 +1,7 @@
 # Container Station / QNAP.  Deploy:  docker-compose pull && docker-compose up -d
 services:
   impact360-sav-runner:
-    image: ghcr.io/itayole/impact360-sav-runner:latest
+    image: ghcr.io/shiluv-i2r/impact360-sav-runner:latest
     container_name: impact360-sav-runner
     restart: unless-stopped
     ports:

@@ -15,10 +15,10 @@ python -m svr.accuracy cases/*.json                      # מבחן דיוק ז�
 
 ## Build ופרסום (לפי כללי Shiluv)
 ```bash
-docker build -t ghcr.io/itayole/impact360-sav-runner:latest --build-arg BUILD_TIME="$(date '+%Y-%m-%d %H:%M')" .
-docker tag  ghcr.io/itayole/impact360-sav-runner:latest ghcr.io/itayole/impact360-sav-runner:<version>
-docker push ghcr.io/itayole/impact360-sav-runner:latest
-docker push ghcr.io/itayole/impact360-sav-runner:<version>
+docker build -t ghcr.io/shiluv-i2r/impact360-sav-runner:latest --build-arg BUILD_TIME="$(date '+%Y-%m-%d %H:%M')" .
+docker tag  ghcr.io/shiluv-i2r/impact360-sav-runner:latest ghcr.io/shiluv-i2r/impact360-sav-runner:<version>
+docker push ghcr.io/shiluv-i2r/impact360-sav-runner:latest
+docker push ghcr.io/shiluv-i2r/impact360-sav-runner:<version>
 ```
 הפריסה ב-QNAP (רצים על ה-NAS, Claude לא ניגש אליו): `docker-compose pull && docker-compose up -d` — עם `docker-compose.yml` שבספריה, אחרי התאמת נתיב ה-volume.
 
