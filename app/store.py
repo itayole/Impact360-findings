@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import threading
 import time
 import uuid
@@ -13,7 +14,9 @@ from . import config
 
 log = logging.getLogger("i360.store")
 _LOCK = threading.RLock()
-PID_RE = re.compile(r"^[0-9a-f]{12}$")
+PID_RE = re.compile(r"[0-9a-f]{12}\Z")
+SID_RE = re.compile(r"[0-9a-f]{8}\Z")
+_PLOCKS, _PLOCKS_GUARD = {}, threading.Lock()
 
 
 def now():
@@ -21,11 +24,25 @@ def now():
 
 
 def _write(path, obj):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, path)
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=d, suffix=".tmp")       # unique name: concurrent writers must never share one temp file
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=1)
+        with _LOCK:                                            # replacing one target from several threads: serialise (Windows refuses otherwise)
+            for attempt in range(6):
+                try:
+                    os.replace(tmp, path)
+                    break
+                except PermissionError:                        # OneDrive / antivirus may hold the target for a moment
+                    if attempt == 5:
+                        raise
+                    time.sleep(0.05 * (attempt + 1))
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
 
 
 def _read(path, default=None):
@@ -95,6 +112,19 @@ class Store:
             raise KeyError(pid)
         return os.path.join(self.projects, pid)
 
+    def plock(self, pid):
+        """Per-project re-entrant lock: held around every read-modify-write of mapping.json / project.json."""
+        self.pdir(pid)
+        with _PLOCKS_GUARD:
+            return _PLOCKS.setdefault(pid, threading.RLock())
+
+    def _live(self, pid):
+        """The project folder must exist: a job finishing after a delete must not resurrect a half project."""
+        d = self.pdir(pid)
+        if not os.path.isdir(d):
+            raise KeyError(pid)
+        return d
+
     def new_project(self, name, sav_name, dictionary, user=""):
         pid = uuid.uuid4().hex[:12]
         os.makedirs(self.pdir(pid), exist_ok=True)
@@ -111,7 +141,7 @@ class Store:
 
     def save_project(self, p):
         p["updated_at"] = now()
-        _write(os.path.join(self.pdir(p["id"]), "project.json"), p)
+        _write(os.path.join(self._live(p["id"]), "project.json"), p)
 
     def projects_list(self, limit=50):
         out = []
@@ -134,7 +164,7 @@ class Store:
 
     def save_mapping(self, pid, mapping):
         with _LOCK:
-            _write(os.path.join(self.pdir(pid), "mapping.json"), mapping)
+            _write(os.path.join(self._live(pid), "mapping.json"), mapping)
 
     def charts_base_path(self, pid):
         return os.path.join(self.pdir(pid), "charts_base.pptx")
@@ -143,7 +173,7 @@ class Store:
         return os.path.join(self.pdir(pid), "output.xlsx")
 
     def save_json(self, pid, name, obj):
-        _write(os.path.join(self.pdir(pid), name), obj)
+        _write(os.path.join(self._live(pid), name), obj)
 
     def load_json(self, pid, name, default=None):
         return _read(os.path.join(self.pdir(pid), name), default)
@@ -167,7 +197,7 @@ class Store:
             return sid
 
     def get_snapshot(self, pid, sid):
-        if not re.match(r"^[0-9a-f]{8}$", sid or ""):
+        if not SID_RE.match(sid or ""):
             raise KeyError(sid)
         s = _read(os.path.join(self.pdir(pid), "snapshots", f"{sid}.json"))
         if s is None:
@@ -200,14 +230,25 @@ class Store:
         removed = dict(uploads=0, projects=0)
         for f in os.listdir(self.uploads):
             p = os.path.join(self.uploads, f)
-            if now_ts - os.path.getmtime(p) > config.UPLOAD_RETENTION_DAYS * 86400:
-                os.remove(p)
-                removed["uploads"] += 1
+            try:                                              # one locked / vanished file must not abort the whole run
+                if os.path.isfile(p) and now_ts - os.path.getmtime(p) > config.UPLOAD_RETENTION_DAYS * 86400:
+                    os.remove(p)
+                    removed["uploads"] += 1
+            except OSError as ex:
+                log.warning("retention: cannot remove an upload (%s)", type(ex).__name__)
         for pid in os.listdir(self.projects):
-            pj = os.path.join(self.projects, pid, "project.json")
-            if PID_RE.match(pid) and os.path.exists(pj) and now_ts - os.path.getmtime(pj) > config.PROJECT_RETENTION_DAYS * 86400:
-                self.delete_project(pid)
-                removed["projects"] += 1
+            if not PID_RE.match(pid):
+                continue
+            d = os.path.join(self.projects, pid)
+            pj = os.path.join(d, "project.json")
+            try:
+                # a folder without project.json (project deleted while a job was running) is purged by its own age
+                age_ref = pj if os.path.exists(pj) else d
+                if now_ts - os.path.getmtime(age_ref) > config.PROJECT_RETENTION_DAYS * 86400:
+                    self.delete_project(pid)
+                    removed["projects"] += 1
+            except OSError as ex:
+                log.warning("retention: cannot remove a project (%s)", type(ex).__name__)
         if any(removed.values()):
             log.info("retention cleanup: %s", removed)
         return removed

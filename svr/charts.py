@@ -32,12 +32,28 @@ MAQAF = "־"            # Hebrew hyphen: unlike "-" it is not absorbed into the 
 THRESHOLD_MIN_ANSWERS = 6   # the display threshold applies to open questions and to any other (non-scale) question with more answers than this
 CHART_TYPES = {"bar_h": "עמודות אופקיות", "bar_v": "עמודות אנכיות", "stacked": "עמודה מוערמת 100%", "donut": "דונאט"}
 DEFAULT_TYPE = "bar_h"
-_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+_HEX = re.compile(r"#[0-9a-fA-F]{6}\Z")
 _W, _H = 13.333, 7.5        # layout coordinates below are for a 16:9 slide, scaled to the actual slide size
+
+
+_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")           # control characters are illegal in XML: one stray byte would fail the whole export
+_PIPE = re.compile(r"\s*\[pipe:[^\]]*\]")                           # questionnaire piping tokens that leak into question texts
+NON_ADDITIVE = SORTED_TYPES + ("derived", "twin", "describe", "message_takeout")     # answers that do not sum to 100%: no pie / 100% stack
+
+
+def clean_text(v):
+    return _CTRL.sub("", str(v if v is not None else "")).strip()
+
+
+def allowed_types(qtype):
+    """Pie and 100%-stacked charts only make sense for answers that add up to 100%."""
+    return [k for k in CHART_TYPES if qtype not in NON_ADDITIVE or k not in ("stacked", "donut")]
 
 
 def _pct(v):
     """Lower threshold for open-question answers, % (0 = show everything)."""
+    if isinstance(v, bool):
+        return 0
     try:
         v = float(v)
     except (TypeError, ValueError):
@@ -46,28 +62,31 @@ def _pct(v):
 
 
 def clean_settings(raw):
-    """Validated copy of user settings (unknown keys / bad values dropped)."""
-    raw = raw or {}
-    d = raw.get("defaults") or {}
-    out = dict(defaults=dict(chart_type=d.get("chart_type") if d.get("chart_type") in CHART_TYPES else DEFAULT_TYPE,
-                             color=d.get("color") if _HEX.match(str(d.get("color") or "")) else DEFAULT_COLOR,
+    """Validated copy of user settings (unknown keys / bad values / wrong types dropped)."""
+    raw = raw if isinstance(raw, dict) else {}
+    d = raw.get("defaults") if isinstance(raw.get("defaults"), dict) else {}
+    ct, col = d.get("chart_type"), d.get("color")
+    out = dict(defaults=dict(chart_type=ct if isinstance(ct, str) and ct in CHART_TYPES else DEFAULT_TYPE,
+                             color=col if isinstance(col, str) and _HEX.match(col) else DEFAULT_COLOR,
                              min_pct=_pct(d.get("min_pct"))),
                questions={})
-    for k, q in (raw.get("questions") or {}).items():
+    qs = raw.get("questions") if isinstance(raw.get("questions"), dict) else {}
+    for k, q in list(qs.items())[:500]:
         if not isinstance(q, dict):
             continue
         o = {}
-        if q.get("chart_type") in CHART_TYPES:
+        if isinstance(q.get("chart_type"), str) and q["chart_type"] in CHART_TYPES:
             o["chart_type"] = q["chart_type"]
-        if _HEX.match(str(q.get("color") or "")):
+        if isinstance(q.get("color"), str) and _HEX.match(q["color"]):
             o["color"] = q["color"]
         if q.get("include") is False:
             o["include"] = False
         if o:
-            out["questions"][str(k)] = o
-    for k in ("base_name",):
-        if raw.get(k):
-            out[k] = str(raw[k])[:200]
+            out["questions"][str(k)[:120]] = o
+    if isinstance(raw.get("base_name"), str) and raw["base_name"]:
+        out["base_name"] = raw["base_name"][:200]
+    if isinstance(raw.get("base_sha"), str) and re.fullmatch(r"[0-9a-f]{6,16}", raw["base_sha"]):
+        out["base_sha"] = raw["base_sha"]
     return out
 
 
@@ -82,6 +101,10 @@ def shades(color, n):
     return out
 
 
+def _finite(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
 def build_specs(results, settings=None, level="sample"):
     """Chart spec per question that has at least one percentage row with a value at `level`."""
     st = clean_settings(settings)
@@ -90,7 +113,7 @@ def build_specs(results, settings=None, level="sample"):
     for t in results["tables"]:
         if not t.get("dict_var"):
             continue
-        pct = [r for r in t["rows"] if r["kind"] == "pct" and r["values"].get(level) is not None]
+        pct = [r for r in t["rows"] if r["kind"] == "pct" and _finite(r["values"].get(level))]
         summ = [r for r in pct if r["section"] == "summary"]
         items = [r for r in pct if r["section"] != "summary"]       # open / multi answers are "analysis" rows (no dictionary slot): still answers
         head = [r for r in summ if r.get("role") == "T2B"] or summ     # the headline net, as "Total Credible" in the brief
@@ -103,19 +126,27 @@ def build_specs(results, settings=None, level="sample"):
         if long_list and st["defaults"]["min_pct"] > 0:        # drop the long tail of rare answers (rating scales are never thinned)
             keep = [r for r in items if r["values"][level] >= st["defaults"]["min_pct"]]
             hidden, items = len(items) - len(keep), keep
-            if not head and not items:
-                continue
         cut = max(0, len(items) - MAX_ITEMS)
         items = items[:MAX_ITEMS]
-        cats = [dict(label=r["label"], value=r["values"][level], headline=True) for r in head]
-        cats += [dict(label=r["label"], value=r["values"][level], headline=False) for r in items]
-        base = next((r["n"].get(level) for r in head + items if r["n"].get(level)), None)
+        # One base per chart: the answers' (most common n). A summary computed on another base (e.g. exposed only) would sit next
+        # to answers of the whole sample and mislead, so it is left out and the slide says so.
+        ns = [r["n"].get(level) for r in (items or head) if r["n"].get(level)]
+        base = max(set(ns), key=ns.count) if ns else None
+        dropped = [r for r in head if base is not None and r["n"].get(level) and r["n"].get(level) != base] if items else []
+        head = [r for r in head if r not in dropped]
+        if not head and not items:
+            continue
+        cats = [dict(label=clean_text(r["label"]), value=r["values"][level], headline=True) for r in head]
+        cats += [dict(label=clean_text(r["label"]), value=r["values"][level], headline=False) for r in items]
         q = st["questions"].get(t["key"], {})
-        out.append(dict(key=t["key"], title=t.get("question") or t["title"], dict_var=t["dict_var"], type=t.get("type"),
-                        short_title=(t.get("short_title") or "").strip() or t["dict_var"],       # the dictionary's short Hebrew title
-                        chart_type=q.get("chart_type", st["defaults"]["chart_type"]), color=q.get("color", st["defaults"]["color"]),
+        allowed = allowed_types(t.get("type"))
+        ctype = q.get("chart_type", st["defaults"]["chart_type"])
+        out.append(dict(key=t["key"], title=clean_text(t.get("question") or t["title"]), dict_var=t["dict_var"], type=t.get("type"),
+                        short_title=clean_text(t.get("short_title")) or t["dict_var"],       # the dictionary's short Hebrew title
+                        chart_type=ctype if ctype in allowed else DEFAULT_TYPE, allowed_types=allowed, color=q.get("color", st["defaults"]["color"]),
                         include=q.get("include", True), level=level, level_name=names.get(level, LEVEL_FALLBACK),
-                        base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, hidden_low=hidden, min_pct=st["defaults"]["min_pct"], categories=cats))
+                        base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, hidden_low=hidden, dropped_head=len(dropped),
+                        min_pct=st["defaults"]["min_pct"], categories=cats))
     return out
 
 
@@ -192,7 +223,7 @@ def _bars(ch, spec, vertical, size):
             _point_label_bold(ser.points[i], size)
     va, ca = ch.value_axis, ch.category_axis
     va.minimum_scale = 0
-    va.maximum_scale = min(100, math.ceil(max(c["value"] for c in cats) * 1.2 / 10.0) * 10)
+    va.maximum_scale = max(10, math.ceil(max(c["value"] for c in cats) * 1.2 / 10.0) * 10)
     va.has_major_gridlines = False
     va.visible = False
     ca.reverse_order = True            # horizontal: first answer on top; vertical (RTL): first answer on the right
@@ -253,7 +284,10 @@ def _donut(ch, spec):
 def question_footer(spec):
     """Grey 8pt line at the bottom of the slide: the question as asked, and its number / variable."""
     ident = spec["dict_var"] if spec["key"] == spec["dict_var"] else f"{spec['key']} / {spec['dict_var']}"
-    return f"{spec['title']}  |  {ident}"
+    q = re.sub(r"\s+", " ", _PIPE.sub("", spec["title"])).strip()
+    if len(q) > 260:
+        q = q[:259].rstrip() + "…"                                  # two 8pt lines at most: a long text must not run off the slide
+    return f"{q}  |  {ident}"
 
 
 def _add_slide(prs, layout, spec, k):
@@ -268,7 +302,10 @@ def _add_slide(prs, layout, spec, k):
         _rtl_paragraph(tf.paragraphs[0])
         for r in tf.paragraphs[0].runs:
             r.font._rPr.set("lang", "he-IL")
-        top_chart = max(1.2 * k, (title_ph.top + title_ph.height) / 914400 + 0.1)
+        try:
+            top_chart = max(1.2 * k, (title_ph.top + title_ph.height) / 914400 + 0.1)
+        except TypeError:                                  # a client layout without explicit geometry
+            top_chart = 1.2 * k
     else:
         _textbox(slide, 0.6, 0.35, 12.1, 0.8, spec["short_title"], 28, True, "333333", k)
         top_chart = 1.2 * k
@@ -311,6 +348,9 @@ def _add_slide(prs, layout, spec, k):
         _stacked(ch, spec)
     else:
         _donut(ch, spec)
+    for tx in ch._chartSpace.iter(qn("c:txPr")):                 # Hebrew labels: paragraph direction RTL so punctuation / Latin stay on the right side
+        for ppr in tx.iter(qn("a:pPr")):
+            ppr.set("rtl", "1")
     # Bottom notes: ONE number per text box and no hyphen touching a digit (the BIDI algorithm would swap two numbers in a Hebrew
     # line, and "ל-5%" renders as a minus). Boxes fill the row from the right.
     notes = [(f"בסיס: {spec['level_name']}" + (f", N={spec['base_n']}" if spec["base_n"] is not None else ""), False, "7F7F7F")]
@@ -318,6 +358,8 @@ def _add_slide(prs, layout, spec, k):
         notes += [(f"סף תצוגה: {spec['min_pct']:g}%", False, "7F7F7F"), (f"הוסתרו {spec['hidden_low']} תשובות קטנות", False, "7F7F7F")]
     if spec["truncated"]:
         notes.append((f"לא מוצגות {spec['truncated']} תשובות קטנות", False, "7F7F7F"))
+    if spec.get("dropped_head"):
+        notes.append(("סיכום על בסיס אחר לא מוצג", False, "7F7F7F"))
     if spec["low_base"]:
         notes.append((f"⚠ בסיס נמוך מ{MAQAF}{MIN_N}", True, "C00000"))
     w = min(3.0, 12.1 / len(notes))
@@ -356,11 +398,22 @@ def check_base(data):
     return round(prs.slide_width / 914400, 2), round(prs.slide_height / 914400, 2), [l.name for l in prs.slide_layouts]
 
 
+_SECTIONS_EXT = "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"       # p14:sectionLst
+
+
 def _clear_slides(prs):
     lst = prs.slides._sldIdLst
     for sid in list(lst):
         prs.part.drop_rel(sid.rId)
         lst.remove(sid)
+    root = prs._element                                    # sections and custom shows list slide ids: stale ids make PowerPoint ask to repair the file
+    for el in root.findall(qn("p:custShowLst")):
+        root.remove(el)
+    ext_lst = root.find(qn("p:extLst"))
+    if ext_lst is not None:
+        for ext in list(ext_lst):
+            if ext.get("uri") == _SECTIONS_EXT:
+                ext_lst.remove(ext)
 
 
 def _pick_layout(prs):
@@ -370,7 +423,8 @@ def _pick_layout(prs):
         types = [str(ph.placeholder_format.type) for ph in lay.placeholders]
         if not any("TITLE" in t and "SUB" not in t for t in types):
             continue
-        s = len(types) - (10 if "title only" in (lay.name or "").lower() else 0)
+        nm = (lay.name or "").lower()
+        s = len(types) - (10 if ("title only" in nm or "כותרת בלבד" in nm) else 0)
         if score is None or s < score:
             best, score = lay, s
     return best or prs.slide_layouts[len(prs.slide_layouts) - 1]

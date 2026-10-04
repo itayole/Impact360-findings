@@ -18,6 +18,13 @@ from .compute import TRUSTED
 
 MATCH_THRESHOLD = 0.90          # Jaccard; spec 8 [לאשר]
 _LOCK = threading.RLock()
+TID_RE = re.compile("[" + chr(92) + "w" + chr(92) + "-]{1,60}" + chr(92) + "Z")        # template ids are folder names: letters, digits, _ and - only
+
+
+def valid_tid(tid):
+    return isinstance(tid, str) and bool(TID_RE.match(tid))
+
+
 DECISION_DROP = ("review", "warnings", "proposal", "needs_approval", "score", "qnr_item", "template_source")
 
 
@@ -69,6 +76,8 @@ class Library:
 
     # ------------------------------------------------------------------ read
     def _versions(self, tid):
+        if not valid_tid(tid):
+            return []
         d = os.path.join(self.tdir, tid)
         if not os.path.isdir(d):
             return []
@@ -79,6 +88,8 @@ class Library:
         if not vs:
             return None
         v = version or vs[-1]
+        if not isinstance(v, int) or v not in vs:
+            return None
         return _read(os.path.join(self.tdir, tid, f"v{v:03d}.json"))
 
     def list(self):
@@ -116,7 +127,12 @@ class Library:
         """Create the template or add a new version.  Returns the stored template dict."""
         with _LOCK:
             tid = template_id or re.sub(r"[^\w\-]+", "_", name, flags=re.U).strip("_")[:60] or "template"
+            if not valid_tid(tid):
+                raise ValueError("מזהה תבנית לא תקין")
             prev = self.get(tid)
+            if prev and not template_id and prev["name"] != name:
+                # "A B" and "A_B" give the same folder name: never turn another template into a new version silently
+                raise ValueError(f"כבר קיימת תבנית אחרת בשם דומה ('{prev['name']}'). בחר/י שם אחר, או שמור כגרסה חדשה שלה")
             stored = _decisions_only(mapping)
             t = dict(id=tid, name=name, client=client, tracker=tracker, version=(prev["version"] + 1) if prev else 1,
                      created_at=datetime.datetime.now().isoformat(timespec="seconds"), created_by=user,
@@ -125,6 +141,19 @@ class Library:
             _atomic_write(os.path.join(self.tdir, tid, f"v{t['version']:03d}.json"), t)
             self._grow_aliases(mapping)
             return t
+
+    # ------------------------------------------------------------------ client's chart design file (one per template version)
+    def base_path(self, tid, version):
+        return os.path.join(self.tdir, tid, f"v{int(version):03d}_charts_base.pptx")
+
+    def find_base(self, tid, version):
+        """The design file saved with that version (or the unversioned one written by 0.3.x)."""
+        if not valid_tid(tid):
+            return None
+        for p in (self.base_path(tid, version), os.path.join(self.tdir, tid, "charts_base.pptx")):
+            if os.path.exists(p):
+                return p
+        return None
 
     # ------------------------------------------------------------------ aliases (grown from approvals)
     def aliases(self):

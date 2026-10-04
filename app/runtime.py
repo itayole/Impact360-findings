@@ -61,6 +61,10 @@ def load_dictionary(path):
 
 
 # ------------------------------------------------------------------------------------------ jobs
+class UserError(Exception):
+    """An error whose (Hebrew) message is safe to show to the user."""
+
+
 class Jobs:
     def __init__(self):
         self.pool = ThreadPoolExecutor(max_workers=config.WORKERS, thread_name_prefix="run")
@@ -71,6 +75,8 @@ class Jobs:
         jid = uuid.uuid4().hex[:12]
         job = dict(id=jid, project_id=project_id, status="queued", stage="ממתין בתור", pct=0, result=None, error=None)
         with self._lock:
+            for old in [k for k, j in self.jobs.items() if j["status"] in ("done", "error") and len(self.jobs) > 50][:-20]:
+                del self.jobs[old]                  # keep the job table small (each finished job holds its whole result)
             self.jobs[jid] = job
 
         def wrapped():
@@ -79,8 +85,9 @@ class Jobs:
                 job["result"] = fn(lambda stage, pct: job.update(stage=stage, pct=pct))
                 job.update(status="done", stage="הסתיים", pct=100)
             except Exception as ex:  # noqa: BLE001 - surfaced to the user, never swallowed
-                log.exception("job %s failed", jid)
-                job.update(status="error", error=f"{type(ex).__name__}: {ex}")
+                # the full message can hold file paths or cell values: log only the type, tell the user something generic
+                log.error("job %s failed: %s", jid, type(ex).__name__)
+                job.update(status="error", error=ex.args[0] if isinstance(ex, UserError) else f"ההרצה נכשלה ({type(ex).__name__}). פנה/י למנהל המערכת")
 
         self.pool.submit(wrapped)
         return job

@@ -22,6 +22,8 @@ docker push ghcr.io/itayole/impact360-sav-runner:<version>
 ```
 הפריסה ב-QNAP (רצים על ה-NAS, Claude לא ניגש אליו): `docker-compose pull && docker-compose up -d` — עם `docker-compose.yml` שבספריה, אחרי התאמת נתיב ה-volume.
 
+**הרשאות ל-`/data`:** המיכל רץ כמשתמש לא-root (uid 10001). אם תיקיית `./data` ב-NAS שייכת ל-admin/root המיכל לא יצליח לכתוב ויקרוס בהפעלה. פעם אחת, על ה-NAS: `chown -R 10001:10001 ./data` (או `user: "<uid>:<gid>"` ב-compose). בדיקה: `GET /api/health` מחזיר 503 כשאי אפשר לכתוב.
+
 ## הגדרות (משתני סביבה)
 | משתנה | ברירת מחדל | תיאור |
 |---|---|---|

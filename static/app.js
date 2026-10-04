@@ -35,6 +35,19 @@ function h(tag, attrs, ...kids) {
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 3500); }
 function user() { try { return localStorage.getItem('i360user') || ''; } catch (e) { return S._user || ''; } }
 function setUser(v) { try { localStorage.setItem('i360user', v); } catch (e) { S._user = v; } $('#nav-user').textContent = '👤 ' + (v || 'ללא שם'); }
+function errText(data, status) {
+  const d = data && data.detail;
+  if (Array.isArray(d)) return d.map(x => (x && x.msg) || String(x)).join('; ') || ('שגיאה ' + status);
+  return (typeof d === 'string' && d) || ('שגיאה ' + status);
+}
+async function uploadForm(path, fd) {      // multipart upload with the same error handling as api()
+  let r;
+  try { r = await fetch('api' + path, { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } }); } catch (e) { throw new Error('אין חיבור לשרת — ודא/י שהאפליקציה רצה ורענן/י את הדף'); }
+  let data = null;
+  try { data = await r.json(); } catch (e) { /* not json */ }
+  if (!r.ok) throw new Error(errText(data, r.status));
+  return data;
+}
 async function api(path, opts = {}) {
   const o = { method: 'GET', headers: { 'X-User': encodeURIComponent(user() || 'anonymous') }, ...opts };
   if (opts.json !== undefined) { o.method = opts.method || 'POST'; o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opts.json); }
@@ -42,7 +55,7 @@ async function api(path, opts = {}) {
   try { r = await fetch('api' + path, o); } catch (e) { throw new Error('אין חיבור לשרת — ודא/י שהאפליקציה רצה ורענן/י את הדף'); }
   let data = null;
   try { data = await r.json(); } catch (e) { /* not json */ }
-  if (!r.ok) throw new Error((data && data.detail) || ('שגיאה ' + r.status));
+  if (!r.ok) throw new Error(errText(data, r.status));
   const cols = data && (data.columns || (data.levels && data.levels.columns));
   if (Array.isArray(cols)) setCols(cols);
   return data;
@@ -122,8 +135,7 @@ async function viewStep1() {
     if (!state.sav) throw new Error('בחר/י קובץ SAV');
     const fd = new FormData();
     fd.append('sav', state.sav); if (qnrInput.files[0]) fd.append('qnr', qnrInput.files[0]); fd.append('name', nameIn.value);
-    const r = await fetch('api/projects', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
-    const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'שגיאה');
+    const d = await uploadForm('/projects', fd);
     state.created = d; renderNext(d);
   });
   form.append(h('h2', null, 'פרויקט חדש'), h('p', { class: 'muted' }, 'קובץ ה-SAV נשאר על השרת הפנימי ונמחק אוטומטית לפי מדיניות הניקוי.'), drop, savInput,
@@ -148,8 +160,9 @@ async function viewStep1() {
     const warns = d.questionnaire_warnings.map(w => h('div', { class: 'alert warn' }, '⚠ ' + w));
     const go = h('button', { class: 'btn gold' }, 'המשך לסקירה ←');
     go.onclick = () => guarded(go, async () => {
-      S.project = d.project;
-      S.review = await api(`/projects/${d.project.id}/profile`, { json: { name: nameIn.value.trim(), brand: brand.value, campaign_id: camp.value, omnibus: omni.checked, template_id: tpl || null } });
+      setProject(null, null);
+      const review = await api(`/projects/${d.project.id}/profile`, { json: { name: nameIn.value.trim(), brand: brand.value, campaign_id: camp.value, omnibus: omni.checked, template_id: tpl || null } });
+      setProject(d.project, review);
       viewStep2();
     });
     info.append(h('hr'), h('div', { class: 'alert ok' }, `נקרא: N=${d.project.n}, ${d.n_columns} עמודות.`), ...warns,
@@ -167,13 +180,19 @@ async function viewStep1() {
     main.append(h('div', { class: 'card' }, h('h2', null, 'פרויקטים אחרונים'), h('div', { class: 'tablewrap', style: 'margin-top:8px' }, t)));
   }
 }
+function setProject(project, review) {      // the only place S.project / S.review change: always together, caches of the previous project dropped
+  S.project = project; S.review = review;
+  S.catalog = null; S.onlyPending = false; S.netBlock = null; S.activeNet = null; S.nets = {}; S.jumpTo = null;
+  if (S.flushNets) S.flushNets = null;
+}
 async function resume(pid) {
   try {
-    S.project = await api('/projects/' + pid);
-    if (!S.project.has_mapping) return toast('לפרויקט זה טרם הורץ פרופיל — העלה/י את הקובץ שוב בשלב 1');
-    S.review = await api(`/projects/${pid}/review`);
+    const project = await api('/projects/' + pid);
+    if (!project.has_mapping) { setProject(null, null); return toast('לפרויקט זה טרם הורץ פרופיל — העלה/י את הקובץ שוב בשלב 1'); }
+    const review = await api(`/projects/${pid}/review`);
+    setProject(project, review);
     S.project.has_output ? viewStep3() : viewStep2();
-  } catch (e) { toast('⚠ ' + e.message); }
+  } catch (e) { setProject(null, null); toast('⚠ ' + e.message); }
 }
 
 /* ------------------------------------------------------------------ step 2 */
@@ -539,7 +558,7 @@ async function secNets() {
 }
 
 function secWarnings() {
-  const host = h('div', 'טוען…');
+  const host = h('div', null, 'טוען…');
   api(`/projects/${S.project.id}/warnings`).then(w => {
     host.replaceChildren(w.length ? h('ul', null, ...w.map(x => h('li', null, x.text))) : h('div', { class: 'alert ok' }, 'אין אזהרות פתוחות.'));
     pill.textContent = w.length + ' אזהרות'; pill.className = 'pill ' + (w.length ? 'need' : 'okp');
@@ -562,7 +581,7 @@ function secResults(open) {
   return d;
 }
 
-function editCounts(key) { S.netBlock = key; S.jumpTo = key; S.step === 2 ? viewStep2() : viewStep2(); }
+function editCounts(key) { S.netBlock = key; S.jumpTo = key; viewStep2(); }
 
 function renderTables(host, R, reload) {
   host.replaceChildren();
@@ -656,6 +675,12 @@ function shades(color, n) {
   const rgb = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
   return Array.from({ length: n }, (_, i) => { const t = 0.65 * i / Math.max(n - 1, 1); return '#' + rgb.map(c => Math.round(c + (255 - c) * t).toString(16).padStart(2, '0')).join('').toUpperCase(); });
 }
+const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;     // long Hebrew labels: cut for the preview, full text in the tooltip
+function labelText(x, y, anchor, size, label, maxChars, fill, extra) {
+  const t = svgEl('text', { x, y, 'text-anchor': anchor, 'font-size': size, fill, ...(extra || {}) }, clip(label, maxChars));
+  t.append(svgEl('title', {}, label));
+  return t;
+}
 const chartParts = spec => { const it = spec.categories.filter(c => !c.headline); return it.length ? it : spec.categories; };
 /* Previews mirror the PPTX: RTL (answer labels on the right, first answer on the right / top). */
 function drawChart(spec) {
@@ -663,12 +688,12 @@ function drawChart(spec) {
   const pct = v => Math.round(v) + '%';
   if (T === 'bar_v') {
     const cats = spec.categories, W = 820, H = 380, slot = (W - 40) / cats.length, bw = Math.min(70, slot * 0.6), plotH = 270;
-    const top = Math.max(...cats.map(c => c.value)), max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), svg = svg0(W, H);
+    const top = Math.max(...cats.map(c => c.value)), max = Math.max(10, Math.ceil(top * 1.2 / 10) * 10), svg = svg0(W, H);
     cats.forEach((c, i) => {
       const cx = W - 20 - (i + 0.5) * slot, hgt = Math.max(2, c.value / max * plotH);
       svg.append(svgEl('rect', { x: cx - bw / 2, y: 30 + plotH - hgt, width: bw, height: hgt, fill: spec.color }));
       svg.append(svgEl('text', { x: cx, y: 24 + plotH - hgt, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, pct(c.value)));
-      svg.append(svgEl('text', { x: cx, y: 30 + plotH + 24, 'text-anchor': 'middle', 'font-size': 14, fill: '#404040' }, c.label.length > 16 ? c.label.slice(0, 15) + '…' : c.label));
+      svg.append(labelText(cx, 30 + plotH + 24, 'middle', cats.length > 10 ? 11 : 14, c.label, Math.max(4, Math.floor(slot / (cats.length > 10 ? 6 : 8))), '#404040'));
     });
     return svg;
   }
@@ -677,7 +702,7 @@ function drawChart(spec) {
     const legendRows = parts.length, W = 820;
     const legend = (svg, x0, y0, rowH) => parts.forEach((c, i) => {
       svg.append(svgEl('rect', { x: x0 - 16, y: y0 + i * rowH, width: 16, height: 16, fill: cols[i] }));
-      svg.append(svgEl('text', { x: x0 - 24, y: y0 + i * rowH + 14, 'text-anchor': 'end', 'font-size': 16, fill: '#404040' }, c.label));
+      svg.append(labelText(x0 - 24, y0 + i * rowH + 14, 'end', 16, c.label, T === 'donut' ? 38 : 70, '#404040'));
     });
     if (T === 'stacked') {
       const H = 130 + legendRows * 26, svg = svg0(W, H); let x = W - 20;
@@ -698,17 +723,17 @@ function drawChart(spec) {
   }
   const W = 820, LABEL = 250, ROW = 46, BAR = 30, PAD = 12, H = spec.categories.length * ROW + PAD * 2;
   const top = Math.max(...spec.categories.map(c => c.value));
-  const max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), room = W - LABEL - 70, svg = svg0(W, H);
+  const max = Math.max(10, Math.ceil(top * 1.2 / 10) * 10), room = W - LABEL - 70, svg = svg0(W, H);
   spec.categories.forEach((c, i) => {
     const y = PAD + i * ROW, len = Math.max(2, c.value / max * room);
-    svg.append(svgEl('text', { x: W - 8, y: y + BAR / 2 + 6, 'text-anchor': 'end', 'font-size': 17, fill: '#404040' }, c.label));
+    svg.append(labelText(W - 8, y + BAR / 2 + 6, 'end', 17, c.label, 28, '#404040'));
     svg.append(svgEl('rect', { x: W - LABEL - len, y, width: len, height: BAR, fill: spec.color }));
     svg.append(svgEl('text', { x: W - LABEL - len - 8, y: y + BAR / 2 + 7, 'text-anchor': 'end', 'font-size': 19, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, pct(c.value)));
   });
   return svg;
 }
 async function viewStep4() {
-  try { await viewStep4Inner(); } catch (e) { const c = $('#main .card'); if (c) c.replaceChildren(h('div', { class: 'alert err' }, '⚠ שגיאה בהצגת הגרפים: ' + e.message)); throw e; }
+  try { await viewStep4Inner(); } catch (e) { const c = $('#main .card'); if (c) c.replaceChildren(h('div', { class: 'alert err' }, '⚠ שגיאה בהצגת הגרפים: ' + e.message)); }
 }
 async function viewStep4Inner() {
   setStep(4);
@@ -719,23 +744,26 @@ async function viewStep4Inner() {
   if (!data || !Array.isArray(data.specs)) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ השרת מחזיר פורמט ישן — יש להפעיל מחדש את השרת (uvicorn) לאחר העדכון.')); return; }
   const specs = data.specs, st = data.settings;
   if (!specs.length) { card.replaceChildren(h('p', { class: 'muted' }, 'אין שאלות שניתן להציג כגרף.')); return; }
-  const typeOpts = (sel) => Object.entries(data.types).map(([k, v]) => h('option', { value: k, selected: k === sel }, v));
+  const typeOpts = (sel, allowed) => Object.entries(data.types).filter(([k]) => !allowed || allowed.includes(k)).map(([k, v]) => h('option', { value: k, selected: k === sel }, v));
   /* settings autosave (debounced); the preview is redrawn locally — the numbers never change, only how they are drawn */
   let timer = null;
-  const save = () => { clearTimeout(timer); timer = setTimeout(() => api(`/projects/${S.project.id}/charts/settings`, { method: 'PUT', json: st }).catch(e => toast('⚠ ' + e.message)), 500); };
-  const apply = s => { const q = st.questions[s.key] || {}; s.chart_type = q.chart_type || st.defaults.chart_type; s.color = q.color || st.defaults.color; s.include = q.include !== false; };
+  const flush = () => { clearTimeout(timer); timer = null; return api(`/projects/${S.project.id}/charts/settings`, { method: 'PUT', json: st }).catch(e => toast('⚠ ' + e.message)); };
+  const save = () => { clearTimeout(timer); timer = setTimeout(flush, 500); };
+  const apply = s => { const q = st.questions[s.key] || {}; s.chart_type = q.chart_type || st.defaults.chart_type; s.color = q.color || st.defaults.color; s.include = q.include !== false;
+    if (s.allowed_types && !s.allowed_types.includes(s.chart_type)) s.chart_type = 'bar_h'; };     // pie / 100% stack only where the answers add up (as the server)
   const setQ = (s, k, v, reset) => { const q = (st.questions[s.key] = st.questions[s.key] || {}); if (reset) delete q[k]; else q[k] = v; if (!Object.keys(q).length) delete st.questions[s.key]; apply(s); save(); };
 
   const defType = h('select', null, typeOpts(st.defaults.chart_type));
   const defColor = h('input', { type: 'color', value: st.defaults.color });
   /* lower threshold for open questions: answers under it are not shown. The server applies it (one place for the logic), so the specs are re-read. */
   const minPct = h('input', { type: 'number', min: 0, max: 100, step: 0.5, value: st.defaults.min_pct || 0, style: 'width:90px' });
-  let reload = null;
+  let reload = null, reloadSeq = 0;
   minPct.oninput = () => { st.defaults.min_pct = Math.min(100, Math.max(0, parseFloat(minPct.value) || 0)); clearTimeout(reload);
-    reload = setTimeout(async () => { try { await api(`/projects/${S.project.id}/charts/settings`, { method: 'PUT', json: st });
-      const d2 = await api(`/projects/${S.project.id}/charts`); const keep = specs[cur] && specs[cur].key;
+    reload = setTimeout(async () => { const seq = ++reloadSeq; try { await flush();
+      const d2 = await api(`/projects/${S.project.id}/charts`); if (seq !== reloadSeq) return; const keep = specs[cur] && specs[cur].key;      // an older, slower answer never overwrites a newer one
       specs.splice(0, specs.length, ...d2.specs); sel.replaceChildren(...specs.map((s, i) => h('option', { value: i }, label(s))));
       cur = Math.max(0, specs.findIndex(s => s.key === keep)); sel.value = String(cur); show(cur); } catch (e) { toast('⚠ ' + e.message); } }, 600); };
+  minPct.onchange = () => { minPct.value = st.defaults.min_pct; };      // show the clamped value
   const applyAll = h('button', { class: 'btn small ghost' }, 'החל על כל השאלות');
   const sel = h('select', { size: 14, style: 'width:100%' });
   const view = h('div'); const info = h('div', { class: 'muted' });
@@ -746,7 +774,7 @@ async function viewStep4Inner() {
   const draw = () => { const s = specs[cur]; view.replaceChildren(h('b', { style: 'font-size:1.15em' }, s.short_title || s.title), drawChart(s),
     h('div', { class: 'muted', style: 'font-size:11px' }, `${s.title}  |  ${s.key === s.dict_var ? s.dict_var : s.key + ' / ' + s.dict_var}`)); };      /* the grey footer line of the slide */
   const show = i => { cur = i; const s = specs[i]; apply(s); draw();
-    qType.replaceChildren(...typeOpts(s.chart_type)); qColor.value = s.color; qInc.checked = s.include;
+    qType.replaceChildren(...typeOpts(s.chart_type, s.allowed_types)); qColor.value = s.color; qInc.checked = s.include;
     info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ־30') : '', s.hidden_low ? ` · הוסתרו ${s.hidden_low} תשובות קטנות (סף תצוגה: ${s.min_pct}%)` : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
   specs.forEach(s => { apply(s); sel.append(h('option', { value: specs.indexOf(s) }, label(s))); });
   sel.onchange = () => show(+sel.value);
@@ -769,13 +797,13 @@ async function viewStep4Inner() {
   upBtn.onclick = () => guarded(upBtn, async () => {
     if (!up.files[0]) throw new Error('בחר/י קובץ .pptx / .potx');
     const fd = new FormData(); fd.append('file', up.files[0]);
-    const r = await fetch('api/projects/' + S.project.id + '/charts/base', { method: 'POST', body: fd, headers: { 'X-User': encodeURIComponent(user() || 'anonymous') } });
-    const d = await r.json(); if (!r.ok) throw new Error(d.detail);
+    const d = await uploadForm('/projects/' + S.project.id + '/charts/base', fd);
     baseLbl.textContent = `קובץ עיצוב: ${d.base_name} (${d.width}×${d.height} אינץ׳, ${d.layouts.length} פריסות)`; rmBtn.style.display = '';
   });
   rmBtn.onclick = () => guarded(rmBtn, async () => { await api(`/projects/${S.project.id}/charts/base`, { method: 'DELETE' }); baseLbl.textContent = noBase; rmBtn.style.display = 'none'; });
 
-  const dl = h('a', { class: 'btn gold', href: `api/projects/${S.project.id}/charts.pptx` }, '⬇ הורד מצגת PPTX');
+  const dl = h('button', { class: 'btn gold' }, '⬇ הורד מצגת PPTX');
+  dl.onclick = () => guarded(dl, async () => { await flush(); window.location.href = `api/projects/${S.project.id}/charts.pptx`; });      // the latest choices are saved first
   card.replaceChildren(h('p', { class: 'muted' }, `${specs.length} גרפים · רמת מדגם · גרף נייטיבי של PowerPoint לכל שאלה (ניתן לעריכה). ההגדרות נשמרות אוטומטית ויישמרו עם התבנית (שלב 5).`),
     h('div', { class: 'row' }, h('label', { class: 'f' }, 'סוג גרף (ברירת מחדל)', defType), h('label', { class: 'f' }, 'צבע', defColor),
       h('label', { class: 'f', title: 'בשאלות פתוחות: תשובות שאחוזן נמוך מהסף לא יוצגו (הסיכומים תמיד מוצגים). 0 = הכול' }, 'סף תצוגה בשאלות פתוחות (%)', minPct), applyAll, dl),

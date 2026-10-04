@@ -1,5 +1,7 @@
 """Business logic behind the API routes (kept out of main.py so it can be tested without HTTP)."""
 import copy
+import functools
+import hashlib
 import json
 import os
 import re
@@ -34,6 +36,27 @@ class Bad(Exception):
     """User-facing 400."""
 
 
+def _locked(fn):
+    """Serialise every read-modify-write of one project's mapping / project files (two tabs, autosave bursts, a job finishing)."""
+    @functools.wraps(fn)
+    def wrapper(store, pid, *a, **k):
+        with store.plock(pid):
+            return fn(store, pid, *a, **k)
+    return wrapper
+
+
+def _copy_atomic(src, dst):
+    tmp = dst + ".part"
+    shutil.copyfile(src, tmp)
+    os.replace(tmp, dst)
+
+
+def _drop_stale_base(store, pid, mapping):
+    """One source of truth: the project's design file exists only while mapping['charts']['base_name'] says so."""
+    if not (mapping.get("charts") or {}).get("base_name") and os.path.exists(store.charts_base_path(pid)):
+        os.remove(store.charts_base_path(pid))
+
+
 def _mapping(store, pid):
     """The project's mapping.  Missing project (e.g. deleted while a tab was still open) -> 404 with a clear message;
     project without a profile run -> 400."""
@@ -50,6 +73,15 @@ def build_info():
 
 # ------------------------------------------------------------------------------------------ create
 def create_project(store: Store, name, sav_tmp_path, sav_name, qnr_tmp_path=None, qnr_name="", dictionary=None, user=""):
+    try:
+        return _create_project(store, name, sav_tmp_path, sav_name, qnr_tmp_path, qnr_name, dictionary, user)
+    finally:
+        for t in (sav_tmp_path, qnr_tmp_path):          # whatever happened, no orphan upload stays in uploads/
+            if t and os.path.exists(t):
+                os.remove(t)
+
+
+def _create_project(store: Store, name, sav_tmp_path, sav_name, qnr_tmp_path, qnr_name, dictionary, user):
     dpath = store.dictionary_path(dictionary)
     p = store.new_project(name or os.path.splitext(sav_name)[0], sav_name, os.path.basename(dpath), user)
     pid = p["id"]
@@ -59,11 +91,16 @@ def create_project(store: Store, name, sav_tmp_path, sav_name, qnr_tmp_path=None
         meta = L.load_meta(store.sav_path(pid))
     except Exception as ex:  # noqa: BLE001
         store.delete_project(pid)
-        log.warning("SAV read failed: %r", ex)
+        log.warning("SAV read failed: %s", type(ex).__name__)
         raise Bad(f"לא ניתן לקרוא את קובץ ה-SAV ({type(ex).__name__}). ודא/י שזה קובץ SPSS תקין.")
     if qnr_tmp_path:
         shutil.move(qnr_tmp_path, store.qnr_path(pid))
-        qnr = Q.parse_docx(store.qnr_path(pid))
+        try:
+            qnr = Q.parse_docx(store.qnr_path(pid))
+        except Exception as ex:  # noqa: BLE001
+            store.delete_project(pid)
+            log.warning("questionnaire read failed: %s", type(ex).__name__)
+            raise Bad("לא ניתן לקרוא את קובץ השאלון (docx). ודא/י שהקובץ תקין.")
         store.save_json(pid, "qnr.json", qnr.to_dict())
         p["qnr_name"] = qnr_name
         warnings = list(qnr.warnings)
@@ -78,10 +115,18 @@ def create_project(store: Store, name, sav_tmp_path, sav_name, qnr_tmp_path=None
 
 
 def reattach_sav(store, pid, sav_tmp_path):
-    store.project(pid)
-    shutil.move(sav_tmp_path, store.sav_path(pid))
-    runtime.sav_cache._d.clear()
-    return dict(ok=True)
+    try:
+        store.project(pid)
+        try:
+            L.load_meta(sav_tmp_path)                    # a wrong file must never replace the project's good SAV
+        except Exception as ex:  # noqa: BLE001
+            raise Bad(f"לא ניתן לקרוא את קובץ ה-SAV ({type(ex).__name__}). ודא/י שזה קובץ SPSS תקין.")
+        shutil.move(sav_tmp_path, store.sav_path(pid))
+        runtime.sav_cache._d.clear()
+        return dict(ok=True)
+    finally:
+        if os.path.exists(sav_tmp_path):
+            os.remove(sav_tmp_path)
 
 
 # ------------------------------------------------------------------------------------------ profile
@@ -91,6 +136,7 @@ def _qnr(store, pid):
     return Q.parse_docx(store.qnr_path(pid))
 
 
+@_locked
 def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id=None, template_version=None, user="", name=""):
     p = store.project(pid)
     if (name or "").strip():
@@ -105,18 +151,26 @@ def run_profile(store, pid, brand="", campaign_id="", omnibus=False, template_id
     mapping["project"]["name"] = p["name"]
     mapping["decisions"] = []
     if template_id:
-        t = lib.get(template_id, template_version)
+        if not T.valid_tid(template_id):
+            raise Bad("מזהה תבנית לא תקין")
+        try:
+            tv = int(template_version) if template_version not in (None, "") else None
+        except (TypeError, ValueError):
+            raise Bad("גרסת תבנית לא תקינה")
+        t = lib.get(template_id, tv)
         if not t:
             raise Bad("התבנית לא נמצאה")
         T.apply_template(mapping, t)
-        tb = os.path.join(lib.tdir, template_id, "charts_base.pptx")
-        if os.path.exists(tb):
-            shutil.copyfile(tb, store.charts_base_path(pid))        # the client's chart design comes with the template
-        elif (mapping.get("charts") or {}).get("base_name"):
-            mapping["charts"].pop("base_name")
+        src = lib.find_base(template_id, t["version"])
+        if src:
+            _copy_atomic(src, store.charts_base_path(pid))          # the client's chart design comes with the template version
+        else:
+            for k in ("base_name", "base_sha"):
+                (mapping.get("charts") or {}).pop(k, None)
         _log(mapping, user, "template", f"הוחלה התבנית '{t['name']}' v{t['version']}")
+    _drop_stale_base(store, pid, mapping)
     p.update(brand=brand, campaign_id=campaign_id, omnibus=bool(omnibus), stage="reviewed" if template_id else "profiled",
-             template=dict(id=template_id, version=template_version) if template_id else None)
+             template=dict(id=template_id, version=t["version"]) if template_id else None)
     store.save_project(p)
     store.save_mapping(pid, mapping)
     return review_payload(store, pid, mapping, df, meta)
@@ -163,6 +217,7 @@ def _log(mapping, user, key, what):
     log_.append(dict(key=key, user=u, at=now(), what=what))
 
 
+@_locked
 def apply_patch(store, pid, patch, user=""):
     p = store.project(pid)
     mapping = _mapping(store, pid)
@@ -341,25 +396,38 @@ def results(store, pid):
     return PV.results_tables(ctx)
 
 
+def _base_bytes(store, pid, mapping=None):
+    """The client's design file, or None. It counts only while the mapping says it is set (one source of truth)."""
+    mapping = mapping if mapping is not None else (store.mapping(pid) or {})
+    if (mapping.get("charts") or {}).get("base_name") and os.path.exists(store.charts_base_path(pid)):
+        with open(store.charts_base_path(pid), "rb") as f:
+            return f.read()
+    return None
+
+
 def charts(store, pid):
     """Chart specs (one per question, sample level, same findings tables as the workbook) + the saved chart settings."""
     mapping = _mapping(store, pid)
     st = CH.clean_settings(mapping.get("charts"))
-    has_base = os.path.exists(store.charts_base_path(pid))
+    has_base = os.path.exists(store.charts_base_path(pid)) and bool(st.get("base_name"))
     return dict(settings=st, specs=CH.build_specs(results(store, pid), st), types=CH.CHART_TYPES, default_color=CH.DEFAULT_COLOR,
                 base_name=st.get("base_name", "") if has_base else "")
 
 
+@_locked
 def save_chart_settings(store, pid, raw):
     mapping = _mapping(store, pid)
     st = CH.clean_settings(raw)
-    if (mapping.get("charts") or {}).get("base_name"):
-        st["base_name"] = mapping["charts"]["base_name"]        # the design file is changed only through its own endpoint
+    for k in ("base_name", "base_sha"):        # the design file is changed only through its own endpoint: never taken from the client
+        st.pop(k, None)
+        if (mapping.get("charts") or {}).get(k):
+            st[k] = mapping["charts"][k]
     mapping["charts"] = st
     store.save_mapping(pid, mapping)
     return st
 
 
+@_locked
 def set_chart_base(store, pid, tmp_path, filename, user=""):
     """The client's PowerPoint design file (master / layouts / theme) the charts deck is built on."""
     mapping = _mapping(store, pid)
@@ -369,19 +437,24 @@ def set_chart_base(store, pid, tmp_path, filename, user=""):
         w, h, layouts = CH.check_base(data)
     except CH.BaseError as e:
         raise Bad(str(e))
-    with open(store.charts_base_path(pid), "wb") as f:
+    tmp = store.charts_base_path(pid) + ".part"
+    with open(tmp, "wb") as f:
         f.write(data)
-    mapping.setdefault("charts", CH.clean_settings(None))["base_name"] = (filename or "design.pptx")[:200]
+    os.replace(tmp, store.charts_base_path(pid))
+    ch = mapping.setdefault("charts", CH.clean_settings(None))
+    ch["base_name"] = (filename or "design.pptx")[:200]
+    ch["base_sha"] = hashlib.sha1(data).hexdigest()[:10]       # a different file with the same name still shows as a change in the template history
     _log(mapping, user, "charts", f"נטען קובץ עיצוב לגרפים: {filename}")
     store.save_mapping(pid, mapping)
-    return dict(base_name=mapping["charts"]["base_name"], width=w, height=h, layouts=layouts)
+    return dict(base_name=ch["base_name"], width=w, height=h, layouts=layouts)
 
 
+@_locked
 def remove_chart_base(store, pid, user=""):
     mapping = _mapping(store, pid)
-    if os.path.exists(store.charts_base_path(pid)):
-        os.remove(store.charts_base_path(pid))
-    (mapping.get("charts") or {}).pop("base_name", None)
+    for k in ("base_name", "base_sha"):
+        (mapping.get("charts") or {}).pop(k, None)
+    _drop_stale_base(store, pid, mapping)
     _log(mapping, user, "charts", "הוסר קובץ העיצוב של הגרפים")
     store.save_mapping(pid, mapping)
 
@@ -389,13 +462,10 @@ def remove_chart_base(store, pid, user=""):
 def charts_pptx(store, pid):
     """(bytes, filename) of the charts deck."""
     p = store.project(pid)
+    mapping = _mapping(store, pid)
     c = charts(store, pid)
-    base = None
-    if os.path.exists(store.charts_base_path(pid)):
-        with open(store.charts_base_path(pid), "rb") as f:
-            base = f.read()
-    data = CH.render_pptx(c["specs"], base)
-    name = (store.mapping(pid) or {}).get("project", {}).get("name") or p["name"] or "Impact360"
+    data = CH.render_pptx(c["specs"], _base_bytes(store, pid, mapping))
+    name = mapping.get("project", {}).get("name") or p["name"] or "Impact360"
     return data, f"{name}_CHARTS.pptx"
 
 
@@ -459,7 +529,8 @@ def start_run(store, pid, user=""):
             filename=f"{(m['project'].get('name') or p['name'] or 'Impact360')}_FINDINGS_SAV.xlsx")
         p2 = store.project(pid)
         p2.update(stage="done", last_run=dict(at=res["finished_at"], filename=res["filename"], user=user))
-        store.save_project(p2)
+        with store.plock(pid):
+            store.save_project(p2)
         store.save_json(pid, "last_run.json", res)
         store.metric(dict(event="run", project=pid, slots=summ["slots"], tables=summ["tables"], errors=len(summ["errors"]),
                           layers=metrics_for(m), app=APP_VERSION))
@@ -500,6 +571,7 @@ def variable_values(store, pid, name):
 
 
 # ------------------------------------------------------------------------------------------ snapshots
+@_locked
 def save_snapshot(store, pid, name, user=""):
     mapping = _mapping(store, pid)
     if not (name or "").strip():
@@ -510,12 +582,14 @@ def save_snapshot(store, pid, name, user=""):
     return dict(id=sid)
 
 
+@_locked
 def load_snapshot(store, pid, sid, user=""):
     snap = store.get_snapshot(pid, sid)
     current = store.mapping(pid)
     if current is not None:       # never lose the settings being replaced
         store.save_snapshot(pid, f"גיבוי אוטומטי לפני טעינת '{snap['name']}'", current, user, auto=True)
     mapping = snap["mapping"]
+    _drop_stale_base(store, pid, mapping)
     _log(mapping, user, "snapshot", f"נטענו הגדרות שמורות '{snap['name']}' ({snap['created_at'].replace('T', ' ')})")
     store.save_mapping(pid, mapping)
     p = store.project(pid)
@@ -525,6 +599,7 @@ def load_snapshot(store, pid, sid, user=""):
 
 
 # ------------------------------------------------------------------------------------------ templates
+@_locked
 def save_template(store, pid, name, user="", client="", tracker="", template_id=None):
     mapping = _mapping(store, pid)
     pend = [e["key"] for e in mapping["questions"] if e.get("include", True) and needs_approval(e)]
@@ -533,12 +608,14 @@ def save_template(store, pid, name, user="", client="", tracker="", template_id=
     meta = runtime.load_sav(store, pid)[1] if os.path.exists(store.sav_path(pid)) else None
     fp = T.fingerprint(None, meta) if meta is not None else store.load_json(pid, "fingerprint.json", [])
     lib = T.Library(store.library)
-    t = lib.save(name, mapping, fp, user=user, client=client, tracker=tracker, template_id=template_id)
-    tb = os.path.join(lib.tdir, t["id"], "charts_base.pptx")        # latest design file of the template (not versioned)
-    if os.path.exists(store.charts_base_path(pid)):
-        shutil.copyfile(store.charts_base_path(pid), tb)
-    elif os.path.exists(tb):
-        os.remove(tb)
+    if template_id is not None and not T.valid_tid(template_id):
+        raise Bad("מזהה תבנית לא תקין")
+    try:
+        t = lib.save(name, mapping, fp, user=user, client=client, tracker=tracker, template_id=template_id)
+    except ValueError as e:
+        raise Bad(str(e))
+    if _base_bytes(store, pid, mapping) is not None:            # the design file is stored with THIS version; other versions keep theirs
+        _copy_atomic(store.charts_base_path(pid), lib.base_path(t["id"], t["version"]))
     _log(mapping, user, "template", f"נשמרה תבנית '{t['name']}' v{t['version']}")
     store.save_mapping(pid, mapping)
     return dict(id=t["id"], version=t["version"], changes=t["changes"])

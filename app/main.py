@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import hmac
 import logging
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -32,7 +33,8 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="Impact360 SAV Runner", version=service.APP_VERSION, docs_url="/api/docs", openapi_url="/api/openapi.json",
+app = FastAPI(title="Impact360 SAV Runner", version=service.APP_VERSION, docs_url=None, redoc_url=None, openapi_url=None,       # Swagger UI loads JS from a CDN: not allowed here
+              
               lifespan=lifespan)
 
 
@@ -43,13 +45,15 @@ def user_of(request: Request):
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    if config.BASIC_AUTH_USER and not request.url.path.startswith("/api/health"):
+    if config.BASIC_AUTH_USER and request.url.path != "/api/health":
         ok = False
         h = request.headers.get("authorization", "")
         if h.lower().startswith("basic "):
             try:
                 u, _, pw = base64.b64decode(h[6:]).decode("utf-8").partition(":")
-                ok = hmac.compare_digest(u, config.BASIC_AUTH_USER) and hmac.compare_digest(pw, config.BASIC_AUTH_PASS)
+                ok = (bool(config.BASIC_AUTH_PASS)               # a user without a password configured is a misconfiguration: never let anyone in
+                      and hmac.compare_digest(u.encode("utf-8"), config.BASIC_AUTH_USER.encode("utf-8"))
+                      and hmac.compare_digest(pw.encode("utf-8"), config.BASIC_AUTH_PASS.encode("utf-8")))
             except Exception:  # noqa: BLE001
                 ok = False
         if not ok:
@@ -74,7 +78,14 @@ async def key_handler(request, exc):
 
 @app.exception_handler(FileNotFoundError)
 async def gone_handler(request, exc):
-    return JSONResponse(status_code=410, content=dict(detail=str(exc) or "הקובץ לא קיים עוד"))
+    # OS errors carry file paths: only our own (Hebrew, path-free) messages are shown
+    msg = str(exc) if (exc.filename is None and exc.args and isinstance(exc.args[0], str) and exc.args[0]) else "הקובץ לא קיים עוד"
+    return JSONResponse(status_code=410, content=dict(detail=msg))
+
+
+def _safe_name(fn):
+    """Download name: no path separators, quotes or control characters."""
+    return re.sub(r'[\\/"\x00-\x1f]+', "_", fn or "") or "download"
 
 
 async def _save_upload(up: UploadFile, suffix):
@@ -124,12 +135,15 @@ async def create_project(request: Request, sav: UploadFile = File(...), qnr: Upl
         raise service.Bad("יש להעלות קובץ .sav")
     sav_path = await _save_upload(sav, ".sav")
     qnr_path = None
-    if qnr is not None and qnr.filename:
-        if not qnr.filename.lower().endswith(".docx"):
-            os.remove(sav_path)
-            raise service.Bad("השאלון חייב להיות בפורמט .docx")
-        qnr_path = await _save_upload(qnr, ".docx")
-    log.info("upload project sav=%s bytes=%s", sav.filename, os.path.getsize(sav_path))
+    try:
+        if qnr is not None and qnr.filename:
+            if not qnr.filename.lower().endswith(".docx"):
+                raise service.Bad("השאלון חייב להיות בפורמט .docx")
+            qnr_path = await _save_upload(qnr, ".docx")
+    except BaseException:
+        os.remove(sav_path)                      # never leave the first upload behind when the second one fails
+        raise
+    log.info("upload project sav=%r bytes=%s", (sav.filename or "")[:80], os.path.getsize(sav_path))
     return service.create_project(store, name, sav_path, sav.filename, qnr_path, qnr.filename if qnr_path else "",
                                   dictionary or None, user_of(request))
 
@@ -153,6 +167,9 @@ def delete_project(pid: str):
 
 @app.post("/api/projects/{pid}/sav")
 async def reattach(pid: str, sav: UploadFile = File(...)):
+    store.project(pid)                           # 404 before anything is written
+    if not (sav.filename or "").lower().endswith(".sav"):
+        raise service.Bad("יש להעלות קובץ .sav")
     path = await _save_upload(sav, ".sav")
     return service.reattach_sav(store, pid, path)
 
@@ -228,7 +245,7 @@ def charts_pptx(pid: str):
     store.project(pid)
     data, fn = service.charts_pptx(store, pid)
     return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(fn)}"})
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(_safe_name(fn), safe="")}"})
 
 
 @app.get("/api/projects/{pid}/variables")
@@ -300,7 +317,7 @@ def download(pid: str):
     fn = res.get("filename") or f"{p['name']}_FINDINGS_SAV.xlsx"
     return FileResponse(path, filename=fn,
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(fn)}"})
+                        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(_safe_name(fn), safe="")}"})
 
 
 # ------------------------------------------------------------------------------------------ library
