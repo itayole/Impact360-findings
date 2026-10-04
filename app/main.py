@@ -190,6 +190,20 @@ def results(pid: str):
     return service.results(store, pid)
 
 
+@app.get("/api/projects/{pid}/charts")
+def charts(pid: str):
+    store.project(pid)
+    return service.charts(store, pid)
+
+
+@app.get("/api/projects/{pid}/charts.pptx")
+def charts_pptx(pid: str):
+    store.project(pid)
+    data, fn = service.charts_pptx(store, pid)
+    return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(fn)}"})
+
+
 @app.get("/api/projects/{pid}/variables")
 def variables(pid: str):
     store.project(pid)

@@ -14,7 +14,7 @@ from .report import MIN_N, sig_letters
 
 
 def _serialize(row, ctx, counts=None):
-    out = dict(label=row["label"], united=row["united"], section=row["section"], kind=row["kind"], note=row["note"],
+    out = dict(label=row["label"], united=row["united"], section=row["section"], role=row.get("role", ""), kind=row["kind"], note=row["note"],
                values={}, letters={}, n={})
     for lv in ctx.display:
         v = row["vals"][lv]

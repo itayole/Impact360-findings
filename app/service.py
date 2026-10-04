@@ -8,6 +8,7 @@ import shutil
 import time
 
 from svr import __version__ as SVR_VERSION
+from svr import charts as CH
 from svr import lib as L
 from svr import messages as M
 from svr import preview as PV
@@ -333,6 +334,19 @@ def results(store, pid):
     vars_, codes = runtime.load_dictionary(mapping["project"]["dictionary"])
     ctx = compute_results(df, meta, vars_, codes, mapping)
     return PV.results_tables(ctx)
+
+
+def charts(store, pid):
+    """One chart spec per question (sample level), drawn from the same findings tables as the workbook."""
+    return CH.build_specs(results(store, pid))
+
+
+def charts_pptx(store, pid):
+    """(bytes, filename) of the charts deck."""
+    p = store.project(pid)
+    data = CH.render_pptx(charts(store, pid))
+    name = (store.mapping(pid) or {}).get("project", {}).get("name") or p["name"] or "Impact360"
+    return data, f"{name}_CHARTS.pptx"
 
 
 def coded_blocks(store, pid):

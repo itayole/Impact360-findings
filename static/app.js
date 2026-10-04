@@ -77,6 +77,7 @@ function goStep(k) {
   if (k === 2) return viewStep2();
   if (k === 3) return viewStep3();
   if (k === 4) return viewStep4();
+  if (k === 5) return viewStep5();
 }
 function backBar(prev, label) {
   return h('div', { class: 'row', style: 'margin-bottom:10px' }, h('button', { class: 'btn ghost small', onclick: prev }, '→ ' + label));
@@ -639,13 +640,54 @@ function renderResult(host, r) {
   host.append(h('div', { class: 'card' }, h('h2', null, 'בקרות'), h('div', { class: 'tablewrap' }, h('table', null, h('thead', null, h('tr', null, ...['בדיקה', 'תוצאה', 'סטטוס'].map(x => h('th', null, x)))),
     h('tbody', null, ...r.checks.map(c => h('tr', { class: c[2] === 'OK' ? '' : 'need' }, h('td', null, c[0]), h('td', null, c[1]), h('td', null, c[2]))))))));
   if (r.open_assumptions.length) host.append(h('div', { class: 'card' }, h('h2', null, 'הנחות פתוחות (מופיעות גם בגליון הגדרות)'), h('ul', null, ...r.open_assumptions.slice(0, 60).map(x => h('li', null, x)))));
-  host.append(h('div', null, h('button', { class: 'btn gold', onclick: () => viewStep4() }, 'שמור כתבנית לגל הבא ←')));
+  host.append(h('div', { class: 'row' }, h('button', { class: 'btn gold', onclick: () => viewStep4() }, 'הפקת גרפים ←'), h('button', { class: 'btn ghost', onclick: () => viewStep5() }, 'שמור כתבנית לגל הבא ←')));
 }
 
-/* ------------------------------------------------------------------ step 4 */
+/* ------------------------------------------------------------------ step 4 — charts */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  if (text != null) el.textContent = text;
+  return el;
+}
+/* Horizontal bars, RTL: answer labels on the right, bars grow leftwards, value at the bar end (same look as the PPTX). */
+function drawChart(spec) {
+  const W = 820, LABEL = 250, ROW = 46, BAR = 30, PAD = 12, H = spec.categories.length * ROW + PAD * 2;
+  const top = Math.max(...spec.categories.map(c => c.value));
+  const max = Math.min(100, Math.ceil(top * 1.2 / 10) * 10), room = W - LABEL - 70;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', direction: 'rtl', style: 'font-family:Assistant,sans-serif;background:#fff' });
+  spec.categories.forEach((c, i) => {
+    const y = PAD + i * ROW, len = Math.max(2, c.value / max * room);
+    svg.append(svgEl('text', { x: W - 8, y: y + BAR / 2 + 6, 'text-anchor': 'end', 'font-size': 17, fill: '#404040' }, c.label));
+    svg.append(svgEl('rect', { x: W - LABEL - len, y, width: len, height: BAR, fill: spec.color }));
+    svg.append(svgEl('text', { x: W - LABEL - len - 8, y: y + BAR / 2 + 7, 'text-anchor': 'end', 'font-size': 19, 'font-weight': c.headline ? 700 : 400, fill: '#595959' }, Math.round(c.value) + '%'));
+  });
+  return svg;
+}
 async function viewStep4() {
   setStep(4);
-  const main = $('#main'); main.replaceChildren(backBar(viewStep3, 'חזרה להרצה ולתוצאות'), h('h1', null, 'שלב 4 · שמירה כתבנית'));
+  const main = $('#main'); main.replaceChildren(backBar(viewStep3, 'חזרה להרצה ולתוצאות'), h('h1', null, 'שלב 4 · גרפים'));
+  const card = h('div', { class: 'card' }, h('p', { class: 'muted' }, 'טוען גרפים…')); main.append(card);
+  let specs;
+  try { specs = await api(`/projects/${S.project.id}/charts`); } catch (e) { card.replaceChildren(h('div', { class: 'alert err' }, '⚠ ' + e.message)); return; }
+  if (!specs.length) { card.replaceChildren(h('p', { class: 'muted' }, 'אין שאלות שניתן להציג כגרף.')); return; }
+  const list = h('select', { size: 14, style: 'width:100%' }, ...specs.map((s, i) => h('option', { value: i }, `${s.dict_var} · ${s.title}`.slice(0, 90))));
+  const view = h('div'); const info = h('div', { class: 'muted' });
+  const show = i => { const s = specs[i]; view.replaceChildren(h('b', null, s.title), drawChart(s));
+    info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
+  list.onchange = () => show(+list.value);
+  const dl = h('a', { class: 'btn gold', href: `api/projects/${S.project.id}/charts.pptx` }, '⬇ הורד מצגת PPTX');
+  card.replaceChildren(h('p', { class: 'muted' }, `${specs.length} גרפים · רמת מדגם · גרף נייטיבי של PowerPoint לכל שאלה (ניתן לעריכה)`), dl,
+    h('div', { class: 'row', style: 'align-items:flex-start;margin-top:12px' }, h('div', { style: 'flex:1;min-width:260px' }, list), h('div', { style: 'flex:2;min-width:340px' }, view, info)),
+    h('div', { style: 'margin-top:12px' }, h('button', { class: 'btn ghost', onclick: () => viewStep5() }, 'שמור כתבנית לגל הבא ←')));
+  list.value = '0'; show(0);
+}
+
+/* ------------------------------------------------------------------ step 5 */
+async function viewStep5() {
+  setStep(5);
+  const main = $('#main'); main.replaceChildren(backBar(viewStep4, 'חזרה לגרפים'), h('h1', null, 'שלב 5 · שמירה כתבנית'));
   const tpls = await api('/library/templates');
   const name = h('input', { type: 'text', value: S.review.mapping.project.name || '' });
   const client = h('input', { type: 'text' }); const tracker = h('input', { type: 'text' });

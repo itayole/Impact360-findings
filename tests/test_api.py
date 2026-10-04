@@ -87,6 +87,14 @@ def test_full_flow(client):
     wb = openpyxl.load_workbook(io.BytesIO(x.content))
     data = {r[4]: r[3] for r in wb["DATA_לייבוא"].iter_rows(min_row=2, values_only=True) if r[4]}
     assert data["SEMIAEX-CAT#01"] == 37.4 and data["UNEXPOSEB#01"] == 36.0 and data["SEMIAEX-VD#01"] == 29.6
+    # charts: same numbers as the findings tables, exported as a native pptx
+    specs = client.get(f"/api/projects/{pid}/charts").json()
+    slog = next(s for s in specs if s["dict_var"] == "SLOGAN")
+    assert any(c["label"] and round(c["value"], 1) == 24.9 for c in slog["categories"])
+    px = client.get(f"/api/projects/{pid}/charts.pptx")
+    assert px.status_code == 200 and px.content[:2] == b"PK" and "pptx" in px.headers["content-disposition"]
+    if os.environ.get("SAVE_CHARTS_PPTX"):
+        open(os.environ["SAVE_CHARTS_PPTX"], "wb").write(px.content)
     # decision log lands in the workbook (who / when / what)
     log_rows = [r for r in wb["הגדרות"].iter_rows(values_only=True) if r[1] == "tester"]
     assert log_rows
