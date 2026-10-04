@@ -161,7 +161,8 @@ def test_min_pct_threshold_applies_to_open_and_long_answer_lists():
     assert CH.clean_settings(dict(defaults=dict(min_pct="abc")))["defaults"]["min_pct"] == 0
     assert CH.clean_settings(dict(defaults=dict(min_pct=250)))["defaults"]["min_pct"] == 100
     prs = Presentation(io.BytesIO(CH.render_pptx(s)))
-    assert any("לא מוצגות" in sh.text_frame.text for sh in prs.slides[0].shapes if sh.has_text_frame)
+    texts = [sh.text_frame.text for sh in prs.slides[0].shapes if sh.has_text_frame]
+    assert "הוסתרו 2 תשובות קטנות" in texts and "סף תצוגה: 5%" in texts
 
 
 def test_question_and_variable_are_in_a_grey_8pt_footer():
@@ -185,3 +186,18 @@ def test_short_title_on_top_from_the_dictionary():
     tops = sorted((sh for sh in prs.slides[0].shapes if sh.has_text_frame and sh.text_frame.text), key=lambda sh: sh.top)
     assert tops[0].text_frame.text == "אמינות" and tops[0].top < Inches(1)      # title on top, question footer at the bottom
     assert tops[-1].text_frame.text.endswith("|  CRED") and tops[-1].top > Inches(7)
+
+
+def test_slide_texts_have_no_bidi_hazards():
+    """One number per bottom note and no 'hyphen + digit' (renders as a minus): checked on every text of a full deck."""
+    import re
+    rows = [_row(f"ת{i}", float(i)) for i in range(1, 30)]
+    res = dict(columns=[], tables=[dict(key="O", title="O", question="q", dict_var="O", type="coded_open", rows=rows),
+                                   dict(key="M", title="M", question="q", dict_var="M", type="multi", rows=[_row(f"x{i}", 1.0, n=12) for i in range(9)])])
+    prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(res, dict(defaults=dict(min_pct=5))))))
+    for sl in prs.slides:
+        for sh in sl.shapes:
+            if sh.has_text_frame and sh.text_frame.text and sh.top < Inches(7.0) and sh.top > Inches(6.5):          # the notes row
+                t = sh.text_frame.text
+                assert not re.search(r"[֐-׿]-\d", t), t
+                assert len(re.findall(r"\d+(?:\.\d+)?", t)) <= 1 or t.startswith("בסיס"), t

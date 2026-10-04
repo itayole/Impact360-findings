@@ -28,6 +28,7 @@ MAX_ITEMS = 20              # answer bars per chart (summaries are always shown)
 DEFAULT_COLOR = "#1F3864"          # dark blue = the workbook navy (svr/report.py)
 SORTED_TYPES = ("multi", "coded_open")      # unordered answers: biggest first; scales keep the questionnaire order
 LEVEL_FALLBACK = "מדגם"
+MAQAF = "־"            # Hebrew hyphen: unlike "-" it is not absorbed into the following number
 THRESHOLD_MIN_ANSWERS = 6   # the display threshold applies to open questions and to any other (non-scale) question with more answers than this
 CHART_TYPES = {"bar_h": "עמודות אופקיות", "bar_v": "עמודות אנכיות", "stacked": "עמודה מוערמת 100%", "donut": "דונאט"}
 DEFAULT_TYPE = "bar_h"
@@ -310,16 +311,18 @@ def _add_slide(prs, layout, spec, k):
         _stacked(ch, spec)
     else:
         _donut(ch, spec)
-    note = f"בסיס: {spec['level_name']}"
-    if spec["base_n"] is not None:
-        note += f", N={spec['base_n']}"
+    # Bottom notes: ONE number per text box and no hyphen touching a digit (the BIDI algorithm would swap two numbers in a Hebrew
+    # line, and "ל-5%" renders as a minus). Boxes fill the row from the right.
+    notes = [(f"בסיס: {spec['level_name']}" + (f", N={spec['base_n']}" if spec["base_n"] is not None else ""), False, "7F7F7F")]
     if spec.get("hidden_low"):
-        note += f" · תשובות מתחת ל-{spec['min_pct']:g}% לא מוצגות ({spec['hidden_low']})"
+        notes += [(f"סף תצוגה: {spec['min_pct']:g}%", False, "7F7F7F"), (f"הוסתרו {spec['hidden_low']} תשובות קטנות", False, "7F7F7F")]
     if spec["truncated"]:
-        note += f" · מוצגות {MAX_ITEMS} תשובות מתוך {MAX_ITEMS + spec['truncated']}"
-    _textbox(slide, 0.6, 6.75, 9.0, 0.35, note, 12, False, "7F7F7F", k)
+        notes.append((f"לא מוצגות {spec['truncated']} תשובות קטנות", False, "7F7F7F"))
     if spec["low_base"]:
-        _textbox(slide, 9.6, 6.75, 3.1, 0.35, f"⚠ בסיס נמוך מ-{MIN_N}", 12, True, "C00000", k)
+        notes.append((f"⚠ בסיס נמוך מ{MAQAF}{MIN_N}", True, "C00000"))
+    w = min(3.0, 12.1 / len(notes))
+    for i, (txt, bold, col) in enumerate(notes):
+        _textbox(slide, 0.6 + 12.1 - w * (i + 1), 6.75, w, 0.35, txt, 12, bold, col, k)
     _textbox(slide, 0.6, 7.1, 12.1, 0.3, question_footer(spec), 8, False, "808080", k)      # question wording + number / variable
 
 

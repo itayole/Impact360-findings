@@ -747,7 +747,7 @@ async function viewStep4Inner() {
     h('div', { class: 'muted', style: 'font-size:11px' }, `${s.title}  |  ${s.key === s.dict_var ? s.dict_var : s.key + ' / ' + s.dict_var}`)); };      /* the grey footer line of the slide */
   const show = i => { cur = i; const s = specs[i]; apply(s); draw();
     qType.replaceChildren(...typeOpts(s.chart_type)); qColor.value = s.color; qInc.checked = s.include;
-    info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.hidden_low ? ` · ${s.hidden_low} תשובות מתחת ל-${s.min_pct}% לא מוצגות` : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
+    info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ־30') : '', s.hidden_low ? ` · הוסתרו ${s.hidden_low} תשובות קטנות (סף תצוגה: ${s.min_pct}%)` : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
   specs.forEach(s => { apply(s); sel.append(h('option', { value: specs.indexOf(s) }, label(s))); });
   sel.onchange = () => show(+sel.value);
   qType.onchange = () => { setQ(specs[cur], 'chart_type', qType.value, qType.value === st.defaults.chart_type); draw(); };
