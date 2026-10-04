@@ -17,7 +17,7 @@ RESULTS = dict(columns=[dict(key="sample", name="מדגם")], tables=[
         _row("סה״כ אמין", 71.0, section="summary", role="T2B"), _row("רק אמין מאוד", 23.4, section="summary", role="TOP"),
         _row("ממוצע", 2.1, section="summary", role="MEAN", kind="mean")]),
     dict(key="USAGE", title="USAGE", question="איפה שמעת?", dict_var="USAGE", type="multi", rows=[
-        _row(f"ערוץ {i}", float(i), n=12) for i in range(1, 21)]),
+        _row(f"ערוץ {i}", float(i), n=12) for i in range(1, 26)]),
     dict(key="NODICT", title="NODICT", question="", dict_var=None, type="single", rows=[_row("א", 50.0)]),
     dict(key="MEANONLY", title="M", question="x", dict_var="M", type="describe", rows=[_row("ממוצע", 3.2, section="summary", role="MEAN", kind="mean")]),
 ])
@@ -35,7 +35,7 @@ def test_specs_headline_first_and_filters():
 def test_specs_multi_sorted_capped_low_base():
     s = CH.build_specs(RESULTS)[1]
     assert len(s["categories"]) == CH.MAX_ITEMS and s["truncated"] == 5
-    assert s["categories"][0]["value"] == 20.0                    # biggest first for unordered answers
+    assert s["categories"][0]["value"] == 25.0                    # biggest first for unordered answers
     assert s["low_base"] and s["base_n"] == 12
 
 
@@ -118,3 +118,26 @@ def test_bad_base_file_is_rejected():
     import pytest
     with pytest.raises(CH.BaseError):
         CH.check_base(b"not a pptx")
+
+
+def test_open_question_shows_all_answers_and_the_summaries():
+    # open / multi answers are "analysis" rows (no dictionary slot) and the summary is a net with role 'item'
+    res = dict(columns=[], tables=[dict(key="SLOGAN", title="SLOGAN", question="איזה סלוגן?", dict_var="SLOGAN", type="coded_open", rows=[
+        _row("לא יודע", 7.9, section="analysis"), _row("סלוגן א", 24.9, section="analysis"), _row("סלוגן ב", 9.1, section="analysis"),
+        _row("סה״כ זכרו נכון", 24.9, section="summary", role="item"), _row("סה״כ זכרו משהו", 60.0, section="summary", role="item")])])
+    s = CH.build_specs(res)[0]
+    assert [c["label"] for c in s["categories"]] == ["סה״כ זכרו נכון", "סה״כ זכרו משהו", "סלוגן א", "סלוגן ב", "לא יודע"]
+    assert [c["headline"] for c in s["categories"]] == [True, True, False, False, False]      # both summaries, then the answers biggest first
+
+
+def test_single_bar_is_slim_not_full_slide():
+    one = dict(columns=[], tables=[dict(key="A", title="A", question="q", dict_var="A", type="single", rows=[_row("תשובה", 40.0)])])
+    for ct, dim in (("bar_h", "height"), ("bar_v", "width")):
+        prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(one, dict(defaults=dict(chart_type=ct))))))
+        gf = next(sh for sh in prs.slides[0].shapes if sh.has_chart)
+        assert getattr(gf, dim) < Inches(3.5), ct
+        if ct == "bar_v":
+            assert abs(gf.left + gf.width - Inches(12.7)) < 10          # RTL: anchored to the right
+    full = dict(columns=[], tables=[dict(key="A", title="A", question="q", dict_var="A", type="multi", rows=[_row(f"x{i}", float(i)) for i in range(1, 21)])])
+    prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(full))))
+    assert next(sh for sh in prs.slides[0].shapes if sh.has_chart).height > Inches(4)       # 15 answers use the slide

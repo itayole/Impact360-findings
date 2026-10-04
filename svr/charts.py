@@ -24,7 +24,7 @@ from pptx.util import Inches, Pt
 
 FONT = "Assistant"
 MIN_N = 30                  # same threshold as the workbook (svr/report.py)
-MAX_ITEMS = 15              # answer bars per chart (summaries are always shown)
+MAX_ITEMS = 20              # answer bars per chart (summaries are always shown)
 DEFAULT_COLOR = "#1F3864"          # dark blue = the workbook navy (svr/report.py)
 SORTED_TYPES = ("multi", "coded_open")      # unordered answers: biggest first; scales keep the questionnaire order
 LEVEL_FALLBACK = "מדגם"
@@ -80,7 +80,7 @@ def build_specs(results, settings=None, level="sample"):
             continue
         pct = [r for r in t["rows"] if r["kind"] == "pct" and r["values"].get(level) is not None]
         summ = [r for r in pct if r["section"] == "summary"]
-        items = [r for r in pct if r["section"] in ("item", "scale")]
+        items = [r for r in pct if r["section"] != "summary"]       # open / multi answers are "analysis" rows (no dictionary slot): still answers
         head = [r for r in summ if r.get("role") == "T2B"] or summ     # the headline net, as "Total Credible" in the brief
         if not head and not items:
             continue
@@ -153,7 +153,7 @@ def _point_label_bold(point, size):
         d.find(qn("c:spPr") if d.find(qn("c:spPr")) is not None else qn("c:txPr")).addprevious(nf)   # schema order: numFmt, spPr, txPr
 
 
-def _bars(ch, spec, vertical):
+def _bars(ch, spec, vertical, size):
     cats = spec["categories"]
     plot = ch.plots[0]
     plot.gap_width = 70
@@ -166,7 +166,6 @@ def _bars(ch, spec, vertical):
     dls.number_format = '0"%"'
     dls.number_format_is_linked = False
     dls.position = XL_LABEL_POSITION.OUTSIDE_END
-    size = 14 if vertical else 16
     _font(dls.font, size, False, "595959")
     for i, c in enumerate(cats):
         if c["headline"]:
@@ -181,7 +180,7 @@ def _bars(ch, spec, vertical):
         va.reverse_order = True        # RTL: bars grow from the right, the answer labels sit on the right
     ca.format.line.fill.background()
     ca.has_major_gridlines = False
-    _font(ca.tick_labels.font, 14 if vertical else 16, False, "404040")
+    _font(ca.tick_labels.font, size, False, "404040")
 
 
 def _stacked(ch, spec):
@@ -261,13 +260,27 @@ def _add_slide(prs, layout, spec, k):
         cd.categories = [c["label"] for c in cats]
         cd.add_series(spec["level_name"], [c["value"] for c in cats])
         kind = {"bar_h": XL_CHART_TYPE.BAR_CLUSTERED, "bar_v": XL_CHART_TYPE.COLUMN_CLUSTERED, "donut": XL_CHART_TYPE.DOUGHNUT}[ctype]
-    gf = slide.shapes.add_chart(kind, Inches(0.6 * k), Inches(top_chart), Inches(12.1 * k), Inches(bottom - top_chart), cd)
+    # A bar keeps the same thickness whatever the number of answers: the chart box is sized to the data (one answer = a slim chart,
+    # not a full-slide bar). Horizontal: top aligned; vertical: right aligned (RTL).
+    avail, n = bottom - top_chart, len(cd.categories) if ctype != "stacked" else 1
+    x, y, w, h = 0.6 * k, top_chart, 12.1 * k, avail
+    size = 16
+    if ctype == "bar_h":
+        h = min(avail, max(1.0 * k, n * 0.62 * k + 0.3 * k))
+        size = 16 if h / n >= 0.42 * k else 12
+    elif ctype == "bar_v":
+        w = min(12.1 * k, max(3.0 * k, n * 1.6 * k))
+        x = 0.6 * k + 12.1 * k - w
+        size = 14 if n <= 8 else 11
+    elif ctype == "stacked":
+        h = min(avail, (2.6 + 0.3 * math.ceil(len(_parts(spec)) / 3)) * k)
+    gf = slide.shapes.add_chart(kind, Inches(x), Inches(y), Inches(w), Inches(h), cd)
     ch = gf.chart
     ch.has_legend = False
     ch.has_title = False
     ch.font.name = FONT
     if ctype in ("bar_h", "bar_v"):
-        _bars(ch, spec, ctype == "bar_v")
+        _bars(ch, spec, ctype == "bar_v", size)
     elif ctype == "stacked":
         _stacked(ch, spec)
     else:
