@@ -122,5 +122,6 @@ def results_tables(ctx):
             s["status"] = r.get("status", "")
             rows.append(s)
         out.append(dict(key=t["key"], title=t["title"], question=t.get("question", ""), dict_var=t.get("dict_var"),
+                        short_title=((ctx.vars.get(t.get("dict_var")) or {}).get("title") or "") if t.get("dict_var") else "",
                         type=t.get("type"), confidence=t.get("confidence", ""), notes=t.get("notes", []), rows=rows))
     return dict(bases=bases(ctx), letters=ctx.letter, columns=columns(ctx), min_n=MIN_N, tables=out)

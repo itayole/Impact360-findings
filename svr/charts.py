@@ -111,6 +111,7 @@ def build_specs(results, settings=None, level="sample"):
         base = next((r["n"].get(level) for r in head + items if r["n"].get(level)), None)
         q = st["questions"].get(t["key"], {})
         out.append(dict(key=t["key"], title=t.get("question") or t["title"], dict_var=t["dict_var"], type=t.get("type"),
+                        short_title=(t.get("short_title") or "").strip() or t["dict_var"],       # the dictionary's short Hebrew title
                         chart_type=q.get("chart_type", st["defaults"]["chart_type"]), color=q.get("color", st["defaults"]["color"]),
                         include=q.get("include", True), level=level, level_name=names.get(level, LEVEL_FALLBACK),
                         base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, hidden_low=hidden, min_pct=st["defaults"]["min_pct"], categories=cats))
@@ -256,9 +257,20 @@ def question_footer(spec):
 
 def _add_slide(prs, layout, spec, k):
     slide = prs.slides.add_slide(layout)
-    for ph in list(slide.placeholders):                    # client layouts: the slide carries only the chart and the footers (no empty boxes)
-        ph._element.getparent().remove(ph._element)
-    top_chart = 0.5 * k
+    title_ph = next((ph for ph in slide.placeholders if "TITLE" in str(ph.placeholder_format.type) and "SUB" not in str(ph.placeholder_format.type)), None)
+    for ph in list(slide.placeholders):                    # client layouts: keep the title, drop empty body/date/footer boxes
+        if title_ph is None or ph._element is not title_ph._element:
+            ph._element.getparent().remove(ph._element)
+    if title_ph is not None:                               # inherits the client's title formatting
+        tf = title_ph.text_frame
+        tf.text = spec["short_title"]
+        _rtl_paragraph(tf.paragraphs[0])
+        for r in tf.paragraphs[0].runs:
+            r.font._rPr.set("lang", "he-IL")
+        top_chart = max(1.2 * k, (title_ph.top + title_ph.height) / 914400 + 0.1)
+    else:
+        _textbox(slide, 0.6, 0.35, 12.1, 0.8, spec["short_title"], 28, True, "333333", k)
+        top_chart = 1.2 * k
     bottom = 6.7 * k
     cd = CategoryChartData()
     ctype = spec["chart_type"]

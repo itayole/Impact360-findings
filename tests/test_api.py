@@ -91,6 +91,7 @@ def test_full_flow(client):
     ch = client.get(f"/api/projects/{pid}/charts").json()
     slog = next(s for s in ch["specs"] if s["dict_var"] == "SLOGAN")
     assert any(c["label"] and round(c["value"], 1) == 24.9 for c in slog["categories"])
+    assert slog["short_title"] and slog["short_title"] != "SLOGAN"            # the dictionary's short Hebrew title
     # chart choices are saved with the project, validated, and travel with the template
     st = client.put(f"/api/projects/{pid}/charts/settings", json=dict(
         defaults=dict(chart_type="bar_v", color="#112233"), questions={slog["key"]: dict(chart_type="donut", include=False), "x": 1})).json()

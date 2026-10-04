@@ -110,7 +110,8 @@ def test_client_base_design_is_used_pptx_and_potx():
         assert len(prs.slides) == 2                              # 2 questions, the 2 sample slides are gone
         assert prs.slide_width == Inches(10)                     # client's slide size kept
         sl = prs.slides[0]
-        assert sl.shapes.title is None and not sl.placeholders          # no empty client placeholders left on the slide
+        assert sl.shapes.title is not None and sl.shapes.title.text_frame.text == "CRED"       # client's title placeholder carries the short title
+        assert len(list(sl.placeholders)) == 1                                                   # no other empty client boxes left
         assert any(sh.has_chart for sh in sl.shapes)
 
 
@@ -173,3 +174,14 @@ def test_question_and_variable_are_in_a_grey_8pt_footer():
     t0 = [sh for sh in prs.slides[0].shapes if sh.has_text_frame and " | " in sh.text_frame.text][0].text_frame.text
     assert t0 == "עד כמה המותג אמין בעיניך?  |  CRED"
     assert CH.question_footer(dict(title="ש", key="q31", dict_var="CAT")) == "ש  |  q31 / CAT"
+
+
+def test_short_title_on_top_from_the_dictionary():
+    res = dict(RESULTS, tables=[dict(RESULTS["tables"][0], short_title="אמינות")])
+    spec = CH.build_specs(res)[0]
+    assert spec["short_title"] == "אמינות"
+    assert CH.build_specs(RESULTS)[0]["short_title"] == "CRED"            # no dictionary title -> the variable name
+    prs = Presentation(io.BytesIO(CH.render_pptx([spec])))
+    tops = sorted((sh for sh in prs.slides[0].shapes if sh.has_text_frame and sh.text_frame.text), key=lambda sh: sh.top)
+    assert tops[0].text_frame.text == "אמינות" and tops[0].top < Inches(1)      # title on top, question footer at the bottom
+    assert tops[-1].text_frame.text.endswith("|  CRED") and tops[-1].top > Inches(7)

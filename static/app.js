@@ -743,7 +743,8 @@ async function viewStep4Inner() {
   let cur = 0;
   const label = s => `${s.include ? '' : '⛔ '}${s.dict_var} · ${s.title}`.slice(0, 90);
   const refreshList = () => specs.forEach((s, i) => { sel.options[i].textContent = label(s); });
-  const draw = () => view.replaceChildren(h('b', null, specs[cur].title), drawChart(specs[cur]));
+  const draw = () => { const s = specs[cur]; view.replaceChildren(h('b', { style: 'font-size:1.15em' }, s.short_title || s.title), drawChart(s),
+    h('div', { class: 'muted', style: 'font-size:11px' }, `${s.title}  |  ${s.key === s.dict_var ? s.dict_var : s.key + ' / ' + s.dict_var}`)); };      /* the grey footer line of the slide */
   const show = i => { cur = i; const s = specs[i]; apply(s); draw();
     qType.replaceChildren(...typeOpts(s.chart_type)); qColor.value = s.color; qInc.checked = s.include;
     info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.hidden_low ? ` · ${s.hidden_low} תשובות מתחת ל-${s.min_pct}% לא מוצגות` : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
