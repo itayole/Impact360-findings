@@ -57,7 +57,7 @@ def _kinds(prs, i=0):
 def test_settings_cleaning_and_per_question_overrides():
     st = CH.clean_settings(dict(defaults=dict(chart_type="nope", color="red"),
                                 questions={"CRED": dict(chart_type="donut", color="#112233"), "USAGE": dict(include=False, chart_type="x"), "Z": 5}))
-    assert st["defaults"] == dict(chart_type="bar_h", color=CH.DEFAULT_COLOR)
+    assert st["defaults"] == dict(chart_type="bar_h", color=CH.DEFAULT_COLOR, min_pct=0)
     assert st["questions"] == {"CRED": dict(chart_type="donut", color="#112233"), "USAGE": dict(include=False)}
     a, b = CH.build_specs(RESULTS, st)
     assert (a["chart_type"], a["color"], a["include"]) == ("donut", "#112233", True)
@@ -141,3 +141,19 @@ def test_single_bar_is_slim_not_full_slide():
     full = dict(columns=[], tables=[dict(key="A", title="A", question="q", dict_var="A", type="multi", rows=[_row(f"x{i}", float(i)) for i in range(1, 21)])])
     prs = Presentation(io.BytesIO(CH.render_pptx(CH.build_specs(full))))
     assert next(sh for sh in prs.slides[0].shapes if sh.has_chart).height > Inches(4)       # 15 answers use the slide
+
+
+def test_min_pct_threshold_applies_to_open_questions_only():
+    rows = [_row("א", 24.9, section="analysis"), _row("ב", 5.0, section="analysis"), _row("ג", 4.9, section="analysis"), _row("ד", 0.2, section="analysis"),
+            _row("סה״כ", 30.0, section="summary", role="item")]
+    res = dict(columns=[], tables=[dict(key="O", title="O", question="q", dict_var="O", type="coded_open", rows=rows),
+                                   dict(key="M", title="M", question="q", dict_var="M", type="multi", rows=rows)])
+    s = CH.build_specs(res, dict(defaults=dict(min_pct=5)))
+    o, m = s
+    assert [c["label"] for c in o["categories"]] == ["סה״כ", "א", "ב"]            # exactly 5% stays, summaries always stay
+    assert o["hidden_low"] == 2 and o["min_pct"] == 5 and m["hidden_low"] == 0 and len(m["categories"]) == 5     # multi (closed) untouched
+    assert len(CH.build_specs(res)[0]["categories"]) == 5                           # default 0 = everything
+    assert CH.clean_settings(dict(defaults=dict(min_pct="abc")))["defaults"]["min_pct"] == 0
+    assert CH.clean_settings(dict(defaults=dict(min_pct=250)))["defaults"]["min_pct"] == 100
+    prs = Presentation(io.BytesIO(CH.render_pptx(s)))
+    assert any("לא מוצגות" in sh.text_frame.text for sh in prs.slides[0].shapes if sh.has_text_frame)

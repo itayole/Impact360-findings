@@ -34,12 +34,22 @@ _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 _W, _H = 13.333, 7.5        # layout coordinates below are for a 16:9 slide, scaled to the actual slide size
 
 
+def _pct(v):
+    """Lower threshold for open-question answers, % (0 = show everything)."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return 0
+    return round(min(max(v, 0.0), 100.0), 1) if v == v else 0
+
+
 def clean_settings(raw):
     """Validated copy of user settings (unknown keys / bad values dropped)."""
     raw = raw or {}
     d = raw.get("defaults") or {}
     out = dict(defaults=dict(chart_type=d.get("chart_type") if d.get("chart_type") in CHART_TYPES else DEFAULT_TYPE,
-                             color=d.get("color") if _HEX.match(str(d.get("color") or "")) else DEFAULT_COLOR),
+                             color=d.get("color") if _HEX.match(str(d.get("color") or "")) else DEFAULT_COLOR,
+                             min_pct=_pct(d.get("min_pct"))),
                questions={})
     for k, q in (raw.get("questions") or {}).items():
         if not isinstance(q, dict):
@@ -86,6 +96,12 @@ def build_specs(results, settings=None, level="sample"):
             continue
         if t.get("type") in SORTED_TYPES:
             items = sorted(items, key=lambda r: -r["values"][level])
+        hidden = 0
+        if t.get("type") == "coded_open" and st["defaults"]["min_pct"] > 0:        # open questions: drop the long tail of rare answers
+            keep = [r for r in items if r["values"][level] >= st["defaults"]["min_pct"]]
+            hidden, items = len(items) - len(keep), keep
+            if not head and not items:
+                continue
         cut = max(0, len(items) - MAX_ITEMS)
         items = items[:MAX_ITEMS]
         cats = [dict(label=r["label"], value=r["values"][level], headline=True) for r in head]
@@ -95,7 +111,7 @@ def build_specs(results, settings=None, level="sample"):
         out.append(dict(key=t["key"], title=t.get("question") or t["title"], dict_var=t["dict_var"], type=t.get("type"),
                         chart_type=q.get("chart_type", st["defaults"]["chart_type"]), color=q.get("color", st["defaults"]["color"]),
                         include=q.get("include", True), level=level, level_name=names.get(level, LEVEL_FALLBACK),
-                        base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, categories=cats))
+                        base_n=base, low_base=bool(base is not None and base < MIN_N), truncated=cut, hidden_low=hidden, min_pct=st["defaults"]["min_pct"], categories=cats))
     return out
 
 
@@ -288,6 +304,8 @@ def _add_slide(prs, layout, spec, k):
     note = f"בסיס: {spec['level_name']}"
     if spec["base_n"] is not None:
         note += f", N={spec['base_n']}"
+    if spec.get("hidden_low"):
+        note += f" · תשובות מתחת ל-{spec['min_pct']:g}% לא מוצגות ({spec['hidden_low']})"
     if spec["truncated"]:
         note += f" · מוצגות {MAX_ITEMS} תשובות מתוך {MAX_ITEMS + spec['truncated']}"
     _textbox(slide, 0.6, 6.8, 9.0, 0.45, note, 12, False, "7F7F7F", k)

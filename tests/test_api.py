@@ -94,7 +94,7 @@ def test_full_flow(client):
     # chart choices are saved with the project, validated, and travel with the template
     st = client.put(f"/api/projects/{pid}/charts/settings", json=dict(
         defaults=dict(chart_type="bar_v", color="#112233"), questions={slog["key"]: dict(chart_type="donut", include=False), "x": 1})).json()
-    assert st["defaults"] == dict(chart_type="bar_v", color="#112233") and st["questions"] == {slog["key"]: dict(chart_type="donut", include=False)}
+    assert st["defaults"] == dict(chart_type="bar_v", color="#112233", min_pct=0) and st["questions"] == {slog["key"]: dict(chart_type="donut", include=False)}
     ch2 = client.get(f"/api/projects/{pid}/charts").json()
     assert next(s for s in ch2["specs"] if s["key"] == slog["key"])["include"] is False and ch2["specs"][0]["color"] == "#112233"
     assert client.post(f"/api/projects/{pid}/charts/base", files={"file": ("x.pptx", b"junk", "application/octet-stream")}).status_code == 400

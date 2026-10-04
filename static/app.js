@@ -728,6 +728,14 @@ async function viewStep4Inner() {
 
   const defType = h('select', null, typeOpts(st.defaults.chart_type));
   const defColor = h('input', { type: 'color', value: st.defaults.color });
+  /* lower threshold for open questions: answers under it are not shown. The server applies it (one place for the logic), so the specs are re-read. */
+  const minPct = h('input', { type: 'number', min: 0, max: 100, step: 0.5, value: st.defaults.min_pct || 0, style: 'width:90px' });
+  let reload = null;
+  minPct.oninput = () => { st.defaults.min_pct = Math.min(100, Math.max(0, parseFloat(minPct.value) || 0)); clearTimeout(reload);
+    reload = setTimeout(async () => { try { await api(`/projects/${S.project.id}/charts/settings`, { method: 'PUT', json: st });
+      const d2 = await api(`/projects/${S.project.id}/charts`); const keep = specs[cur] && specs[cur].key;
+      specs.splice(0, specs.length, ...d2.specs); sel.replaceChildren(...specs.map((s, i) => h('option', { value: i }, label(s))));
+      cur = Math.max(0, specs.findIndex(s => s.key === keep)); sel.value = String(cur); show(cur); } catch (e) { toast('⚠ ' + e.message); } }, 600); };
   const applyAll = h('button', { class: 'btn small ghost' }, 'החל על כל השאלות');
   const sel = h('select', { size: 14, style: 'width:100%' });
   const view = h('div'); const info = h('div', { class: 'muted' });
@@ -738,7 +746,7 @@ async function viewStep4Inner() {
   const draw = () => view.replaceChildren(h('b', null, specs[cur].title), drawChart(specs[cur]));
   const show = i => { cur = i; const s = specs[i]; apply(s); draw();
     qType.replaceChildren(...typeOpts(s.chart_type)); qColor.value = s.color; qInc.checked = s.include;
-    info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
+    info.replaceChildren(`בסיס: ${s.level_name}${s.base_n != null ? ', N=' + s.base_n : ''}`, s.low_base ? h('span', { class: 'alert warn', style: 'margin-inline-start:8px' }, '⚠ בסיס נמוך מ-30') : '', s.hidden_low ? ` · ${s.hidden_low} תשובות מתחת ל-${s.min_pct}% לא מוצגות` : '', s.truncated ? ` · מוצגות ${s.categories.filter(c => !c.headline).length} תשובות (עוד ${s.truncated} לא מוצגות)` : ''); };
   specs.forEach(s => { apply(s); sel.append(h('option', { value: specs.indexOf(s) }, label(s))); });
   sel.onchange = () => show(+sel.value);
   qType.onchange = () => { setQ(specs[cur], 'chart_type', qType.value, qType.value === st.defaults.chart_type); draw(); };
@@ -768,7 +776,8 @@ async function viewStep4Inner() {
 
   const dl = h('a', { class: 'btn gold', href: `api/projects/${S.project.id}/charts.pptx` }, '⬇ הורד מצגת PPTX');
   card.replaceChildren(h('p', { class: 'muted' }, `${specs.length} גרפים · רמת מדגם · גרף נייטיבי של PowerPoint לכל שאלה (ניתן לעריכה). ההגדרות נשמרות אוטומטית ויישמרו עם התבנית (שלב 5).`),
-    h('div', { class: 'row' }, h('label', { class: 'f' }, 'סוג גרף (ברירת מחדל)', defType), h('label', { class: 'f' }, 'צבע', defColor), applyAll, dl),
+    h('div', { class: 'row' }, h('label', { class: 'f' }, 'סוג גרף (ברירת מחדל)', defType), h('label', { class: 'f' }, 'צבע', defColor),
+      h('label', { class: 'f', title: 'בשאלות פתוחות: תשובות שאחוזן נמוך מהסף לא יוצגו (הסיכומים תמיד מוצגים). 0 = הכול' }, 'סף תצוגה בשאלות פתוחות (%)', minPct), applyAll, dl),
     h('div', { class: 'row', style: 'margin-top:10px' }, up, upBtn, rmBtn, baseLbl),
     h('div', { class: 'row', style: 'align-items:flex-start;margin-top:12px' }, h('div', { style: 'flex:1;min-width:260px' }, sel),
       h('div', { style: 'flex:2;min-width:340px' }, h('div', { class: 'row', style: 'margin-bottom:8px' }, h('label', { class: 'f' }, 'סוג גרף לשאלה', qType), h('label', { class: 'f' }, 'צבע', qColor), h('label', { class: 'f' }, 'לכלול במצגת', qInc)), view, info)),
