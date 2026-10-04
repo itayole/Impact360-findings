@@ -28,6 +28,7 @@ MAX_ITEMS = 20              # answer bars per chart (summaries are always shown)
 DEFAULT_COLOR = "#1F3864"          # dark blue = the workbook navy (svr/report.py)
 SORTED_TYPES = ("multi", "coded_open")      # unordered answers: biggest first; scales keep the questionnaire order
 LEVEL_FALLBACK = "מדגם"
+THRESHOLD_MIN_ANSWERS = 6   # the display threshold applies to open questions and to any other (non-scale) question with more answers than this
 CHART_TYPES = {"bar_h": "עמודות אופקיות", "bar_v": "עמודות אנכיות", "stacked": "עמודה מוערמת 100%", "donut": "דונאט"}
 DEFAULT_TYPE = "bar_h"
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -97,7 +98,8 @@ def build_specs(results, settings=None, level="sample"):
         if t.get("type") in SORTED_TYPES:
             items = sorted(items, key=lambda r: -r["values"][level])
         hidden = 0
-        if t.get("type") == "coded_open" and st["defaults"]["min_pct"] > 0:        # open questions: drop the long tail of rare answers
+        long_list = t.get("type") == "coded_open" or (t.get("type") != "scale" and len(items) > THRESHOLD_MIN_ANSWERS)
+        if long_list and st["defaults"]["min_pct"] > 0:        # drop the long tail of rare answers (rating scales are never thinned)
             keep = [r for r in items if r["values"][level] >= st["defaults"]["min_pct"]]
             hidden, items = len(items) - len(keep), keep
             if not head and not items:

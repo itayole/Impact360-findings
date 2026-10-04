@@ -143,7 +143,7 @@ def test_single_bar_is_slim_not_full_slide():
     assert next(sh for sh in prs.slides[0].shapes if sh.has_chart).height > Inches(4)       # 15 answers use the slide
 
 
-def test_min_pct_threshold_applies_to_open_questions_only():
+def test_min_pct_threshold_applies_to_open_and_long_answer_lists():
     rows = [_row("א", 24.9, section="analysis"), _row("ב", 5.0, section="analysis"), _row("ג", 4.9, section="analysis"), _row("ד", 0.2, section="analysis"),
             _row("סה״כ", 30.0, section="summary", role="item")]
     res = dict(columns=[], tables=[dict(key="O", title="O", question="q", dict_var="O", type="coded_open", rows=rows),
@@ -151,8 +151,12 @@ def test_min_pct_threshold_applies_to_open_questions_only():
     s = CH.build_specs(res, dict(defaults=dict(min_pct=5)))
     o, m = s
     assert [c["label"] for c in o["categories"]] == ["סה״כ", "א", "ב"]            # exactly 5% stays, summaries always stay
-    assert o["hidden_low"] == 2 and o["min_pct"] == 5 and m["hidden_low"] == 0 and len(m["categories"]) == 5     # multi (closed) untouched
+    assert o["hidden_low"] == 2 and o["min_pct"] == 5 and m["hidden_low"] == 0 and len(m["categories"]) == 5     # closed question with <= 6 answers untouched
     assert len(CH.build_specs(res)[0]["categories"]) == 5                           # default 0 = everything
+    seven = [_row(f"a{i}", v) for i, v in enumerate([30, 20, 15, 12, 10, 8, 3.0])]                      # 7 answers (> 6)
+    for typ, shown in (("multi", 6), ("single", 6), ("scale", 7)):                                      # scales are never thinned
+        r = CH.build_specs(dict(columns=[], tables=[dict(key="K", title="K", question="q", dict_var="K", type=typ, rows=seven)]), dict(defaults=dict(min_pct=5)))[0]
+        assert len(r["categories"]) == shown and r["hidden_low"] == 7 - shown, typ
     assert CH.clean_settings(dict(defaults=dict(min_pct="abc")))["defaults"]["min_pct"] == 0
     assert CH.clean_settings(dict(defaults=dict(min_pct=250)))["defaults"]["min_pct"] == 100
     prs = Presentation(io.BytesIO(CH.render_pptx(s)))
